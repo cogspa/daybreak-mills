@@ -1,0 +1,662 @@
+<title>Daybreak Mills</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Archivo:wght@500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:opsz,wght@6..72,300;6..72,400;6..72,500&display=swap">
+
+<style>
+  :root {
+    --navy:      #16233a;
+    --navy-2:    #2c3d5a;
+    --bone:      #f4efe6;
+
+    --bg:        #eceef1;
+    --surface:   #ffffff;
+    --surface-2: #f6f7f9;
+    --border:    #d3d8e0;
+    --border-2:  #e5e8ee;
+    --text:      #16233a;
+    --text-2:    #4d5a70;
+    --text-3:    #7d8798;
+    --spec:      #c8543a;
+    --spec-bg:   #f8e9e5;
+
+    --radius: 10px;
+    --maxw: 1140px;
+    --shadow: 0 1px 2px rgba(22,35,58,.06), 0 10px 30px -16px rgba(22,35,58,.24);
+  }
+
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:        #0e1319;
+      --surface:   #171d26;
+      --surface-2: #1d242e;
+      --border:    #2b3441;
+      --border-2:  #222932;
+      --text:      #e8ecf2;
+      --text-2:    #a3aebe;
+      --text-3:    #778397;
+      --spec:      #e4816a;
+      --spec-bg:   #33201b;
+      --shadow: 0 1px 2px rgba(0,0,0,.5), 0 12px 32px -18px rgba(0,0,0,.8);
+    }
+  }
+  :root[data-theme="dark"] {
+    --bg:        #0e1319;
+    --surface:   #171d26;
+    --surface-2: #1d242e;
+    --border:    #2b3441;
+    --border-2:  #222932;
+    --text:      #e8ecf2;
+    --text-2:    #a3aebe;
+    --text-3:    #778397;
+    --spec:      #e4816a;
+    --spec-bg:   #33201b;
+    --shadow: 0 1px 2px rgba(0,0,0,.5), 0 12px 32px -18px rgba(0,0,0,.8);
+  }
+
+  * { box-sizing: border-box; }
+
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--text);
+    font-family: Newsreader, Georgia, serif;
+    font-size: 17px;
+    line-height: 1.62;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .wrap { max-width: var(--maxw); margin: 0 auto; padding: 0 26px 100px; }
+
+  /* ---------------- masthead ---------------- */
+  header { background: var(--navy); color: var(--bone); }
+  .head-in { max-width: var(--maxw); margin: 0 auto; padding: 52px 26px 44px; }
+  .brandmark {
+    display: inline-block;
+    background: var(--bone);
+    color: var(--navy);
+    font-family: Archivo, sans-serif;
+    font-weight: 800;
+    font-size: 15px;
+    letter-spacing: .17em;
+    padding: 8px 16px 7px;
+    border-radius: 3px;
+  }
+  h1 {
+    font-family: Archivo, sans-serif;
+    font-weight: 800;
+    font-size: clamp(32px, 5vw, 50px);
+    line-height: 1.03;
+    letter-spacing: -.021em;
+    margin: 22px 0 14px;
+    text-wrap: balance;
+    color: var(--bone);
+  }
+  .lede { margin: 0; max-width: 60ch; font-size: 18.5px; color: #c3ccda; }
+  .head-meta {
+    display: flex; flex-wrap: wrap; gap: 10px; margin-top: 24px;
+    font-family: "IBM Plex Mono", monospace; font-size: 12px;
+  }
+  .head-meta span {
+    border: 1px solid #3a4a66; border-radius: 100px; padding: 4px 11px; color: #b4c0d1;
+  }
+
+  /* ---------------- structure ---------------- */
+  section { padding-top: 56px; }
+  h2 {
+    font-family: Archivo, sans-serif; font-weight: 700;
+    font-size: 26px; letter-spacing: -.014em; margin: 0 0 6px; text-wrap: balance;
+  }
+  h3 {
+    font-family: Archivo, sans-serif; font-weight: 600;
+    font-size: 16px; margin: 30px 0 10px; letter-spacing: -.003em;
+  }
+  .sub { color: var(--text-2); margin: 0 0 24px; max-width: 66ch; }
+  p { max-width: 68ch; }
+  .eyebrow {
+    font-family: "IBM Plex Mono", monospace; font-size: 11px; letter-spacing: .14em;
+    text-transform: uppercase; color: var(--spec); font-weight: 600; margin-bottom: 8px;
+  }
+  code {
+    font-family: "IBM Plex Mono", monospace; font-size: .84em;
+    background: var(--surface-2); border: 1px solid var(--border-2);
+    border-radius: 4px; padding: 1px 5px;
+  }
+
+  /* ---------------- pipeline ---------------- */
+  ol.flow { list-style: none; margin: 0; padding: 0; counter-reset: f; display: grid; gap: 0; }
+  ol.flow > li {
+    counter-increment: f;
+    display: grid; grid-template-columns: 40px 1fr; gap: 16px;
+    padding: 15px 0; border-bottom: 1px solid var(--border-2); align-items: start;
+  }
+  ol.flow > li:last-child { border-bottom: 0; }
+  ol.flow > li::before {
+    content: counter(f, decimal-leading-zero);
+    font-family: "IBM Plex Mono", monospace; font-size: 12px; font-weight: 600;
+    color: var(--spec); padding-top: 5px;
+  }
+  ol.flow strong { font-family: Archivo, sans-serif; font-weight: 600; font-size: 15.5px; }
+  ol.flow p { margin: 3px 0 0; color: var(--text-2); font-size: 15.5px; max-width: 62ch; }
+
+  /* ---------------- dieline diagram ---------------- */
+  .die-wrap {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 22px; box-shadow: var(--shadow);
+  }
+  .die {
+    display: grid;
+    grid-template-columns: 196.9fr 63.5fr 196.9fr 63.5fr;
+    grid-template-rows: 63.5fr 304.8fr 63.5fr;
+    grid-template-areas:
+      "top   .     .    ."
+      "front right back left"
+      "bot   .     .    .";
+    gap: 3px;
+    aspect-ratio: 520.8 / 431.8;
+    font-family: Archivo, sans-serif;
+  }
+  .pnl {
+    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    gap: 2px; text-align: center; padding: 6px;
+    border: 1.5px solid var(--border); border-radius: 3px;
+    background: var(--surface-2); overflow: hidden;
+  }
+  .pnl.hero { background: var(--spec-bg); border-color: var(--spec); }
+  .pnl b { font-size: 12.5px; font-weight: 700; letter-spacing: .04em; }
+  .pnl span {
+    font-family: "IBM Plex Mono", monospace; font-size: 9.5px; color: var(--text-3);
+    font-variant-numeric: tabular-nums;
+  }
+  .pnl em {
+    font-family: Newsreader, serif; font-style: normal;
+    font-size: 11.5px; color: var(--text-2); line-height: 1.3;
+  }
+  .pnl.narrow b { font-size: 10px; }
+  .pnl.narrow em, .pnl.narrow span { display: none; }
+  .p-front { grid-area: front; } .p-right { grid-area: right; }
+  .p-back  { grid-area: back; }  .p-left  { grid-area: left; }
+  .p-top   { grid-area: top; }   .p-bot   { grid-area: bot; }
+  .die-cap {
+    font-family: "IBM Plex Mono", monospace; font-size: 11.5px; color: var(--text-3);
+    margin-top: 14px; text-align: center;
+  }
+
+  /* ---------------- tables ---------------- */
+  .tbl-scroll { overflow-x: auto; }
+  table { border-collapse: collapse; width: 100%; min-width: 520px; font-size: 14.5px; }
+  th, td { text-align: left; padding: 10px 14px 10px 0; border-bottom: 1px solid var(--border-2); }
+  th {
+    font-family: Archivo, sans-serif; font-weight: 600; font-size: 12px;
+    letter-spacing: .07em; text-transform: uppercase; color: var(--text-3);
+    border-bottom-color: var(--border);
+  }
+  td.num, th.num {
+    font-family: "IBM Plex Mono", monospace; font-variant-numeric: tabular-nums;
+    font-size: 13px;
+  }
+  td strong { font-family: Archivo, sans-serif; font-weight: 600; }
+
+  /* ---------------- flavour cards ---------------- */
+  .flavours { display: grid; grid-template-columns: repeat(auto-fit, minmax(268px, 1fr)); gap: 16px; }
+  .fl {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden; display: flex; flex-direction: column;
+  }
+  .fl-face { padding: 20px 18px 16px; display: flex; flex-direction: column; gap: 10px; }
+  .fl-chip {
+    align-self: flex-start; background: var(--bone); color: var(--navy);
+    font-family: Archivo, sans-serif; font-weight: 800; font-size: 9px;
+    letter-spacing: .16em; padding: 5px 9px 4px; border-radius: 2px;
+  }
+  .fl-name {
+    font-family: Archivo, sans-serif; font-weight: 800; font-size: 25px;
+    line-height: 1.04; letter-spacing: -.018em;
+  }
+  .fl-form { font-size: 14px; opacity: .92; }
+  .fl-body { padding: 15px 18px 18px; display: grid; gap: 11px; }
+  .fl-claim { font-size: 14.5px; color: var(--text-2); margin: 0; }
+  .swatches { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; }
+  .sw { border-radius: 4px; padding: 7px 8px; display: grid; gap: 1px; border: 1px solid rgba(0,0,0,.10); }
+  .sw i {
+    font-style: normal; font-family: Archivo, sans-serif; font-weight: 600;
+    font-size: 8.5px; letter-spacing: .1em; text-transform: uppercase; opacity: .78;
+  }
+  .sw span { font-family: "IBM Plex Mono", monospace; font-size: 10.5px; font-weight: 500; }
+
+  /* ---------------- front grid ---------------- */
+  .zonegrid {
+    display: grid; grid-template-columns: 1fr; gap: 4px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 14px; max-width: 340px;
+    aspect-ratio: 196.9 / 304.8;
+  }
+  .zone {
+    border: 1.5px dashed var(--border); border-radius: 3px; padding: 8px;
+    display: flex; flex-direction: column; justify-content: center; gap: 2px;
+    background: var(--surface-2);
+  }
+  .zone b { font-family: Archivo, sans-serif; font-size: 12px; font-weight: 600; }
+  .zone span { font-family: "IBM Plex Mono", monospace; font-size: 10px; color: var(--text-3); }
+  .split { display: grid; grid-template-columns: 340px 1fr; gap: 30px; align-items: start; }
+  @media (max-width: 780px) { .split { grid-template-columns: 1fr; } }
+
+  /* ---------------- callout ---------------- */
+  .note {
+    border-left: 3px solid var(--spec); background: var(--surface);
+    border-radius: 0 var(--radius) var(--radius) 0; padding: 15px 20px;
+    margin: 22px 0; max-width: 72ch;
+  }
+  .note p { margin: 0; font-size: 15.5px; }
+  .note p + p { margin-top: 8px; }
+  .note b { font-family: Archivo, sans-serif; font-weight: 650; }
+
+  ul.check { list-style: none; margin: 0; padding: 0; display: grid; gap: 0; }
+  ul.check li {
+    padding: 11px 0 11px 26px; border-bottom: 1px solid var(--border-2);
+    position: relative; font-size: 15.5px; color: var(--text-2); max-width: 68ch;
+  }
+  ul.check li:last-child { border-bottom: 0; }
+  ul.check li::before {
+    content: ""; position: absolute; left: 3px; top: 19px;
+    width: 8px; height: 8px; border: 1.5px solid var(--spec); border-radius: 2px;
+  }
+  ul.check li b { color: var(--text); font-family: Archivo, sans-serif; font-weight: 600; }
+
+  footer {
+    margin-top: 64px; padding-top: 22px; border-top: 1px solid var(--border);
+    color: var(--text-3); font-size: 14px;
+    font-family: "IBM Plex Mono", monospace;
+  }
+  footer a { color: var(--text-2); }
+</style>
+
+<header>
+  <div class="head-in">
+    <div class="brandmark">DAYBREAK MILLS</div>
+    <h1>Six flavours, one carton system</h1>
+    <p class="lede">
+      A packaging design system built on the flattened dieline UVs from
+      <code style="background:#22314c;border-color:#3a4a66;color:#dfe5ee">cereal_boxes.blend</code>.
+      Design flat, wrap in Blender, judge it on a shelf.
+    </p>
+    <div class="head-meta">
+      <span>4 box sizes</span>
+      <span>6 flavours</span>
+      <span>UV map: Dieline</span>
+      <span>v1.0</span>
+    </div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <section>
+    <div class="eyebrow">Process</div>
+    <h2>How art gets onto a box</h2>
+    <p class="sub">
+      The loop is flat art in, rendered carton out. Every step below points at a file
+      that already exists in your <code>cereal_box/</code> folder.
+    </p>
+    <ol class="flow">
+      <li>
+        <div>
+          <strong>Open the dieline template for the size you're designing</strong>
+          <p><code>templates/dieline_Regular.svg</code> — panels, fold lines, safe areas
+             and the front-panel grid, each on its own named layer.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Design on top of it, keeping the template layers locked</strong>
+          <p>Artwork bleeds to the panel edge. Live matter — type, logos, anything you'd
+             mind losing — stays inside the dashed 4&nbsp;mm line.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Export flat at 4096 × 4096, PNG, no transparency</strong>
+          <p>Hide the template layers first. The canvas must stay square and full-bleed;
+             the panel rectangles are positions in UV space, not a crop.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Wire it into the box material through the Dieline UV</strong>
+          <p>Image Texture → Base Color, with a UV Map node set to <code>Dieline</code>.
+             Not <code>CubeProject</code> — that one overlaps front against back.</p>
+        </div>
+      </li>
+      <li>
+        <div>
+          <strong>Render and judge it at shelf distance</strong>
+          <p>Everything reads at 40&nbsp;cm. The real test is 2&nbsp;m, at a glance, next
+             to five siblings. That's what the 24-box grid scene is for.</p>
+        </div>
+      </li>
+    </ol>
+  </section>
+
+  <section>
+    <div class="eyebrow">Anatomy</div>
+    <h2>The dieline</h2>
+    <p class="sub">
+      Six faces unfolded into one square canvas: front, right, back and left in a
+      horizontal strip, with the top and bottom flaps hinged off the front. Proportions
+      below are the real Regular carton.
+    </p>
+
+    <div class="die-wrap">
+      <div class="die">
+        <div class="pnl p-top"><b>TOP</b><span>197 × 64 mm</span><em>brand mark only</em></div>
+        <div class="pnl hero p-front"><b>FRONT</b><span>197 × 305 mm</span><em>masthead, flavour, product shot</em></div>
+        <div class="pnl narrow p-right"><b>RIGHT</b><span>64 × 305 mm</span><em>nutrition + ingredients</em></div>
+        <div class="pnl p-back"><b>BACK</b><span>197 × 305 mm</span><em>activity / story panel</em></div>
+        <div class="pnl narrow p-left"><b>LEFT</b><span>64 × 305 mm</span><em>brand story, recipe</em></div>
+        <div class="pnl p-bot"><b>BOTTOM</b><span>197 × 64 mm</span><em>barcode, batch code</em></div>
+      </div>
+      <div class="die-cap">grey area outside the net is dead UV space — nothing there is ever rendered</div>
+    </div>
+
+    <div class="note">
+      <p><b>Two UV maps, and you want the second one.</b></p>
+      <p>
+        <code>CubeProject</code> is the box unwrap — clean, even texel density, but front
+        and back share the same UV region by design, so anything you paint on one appears
+        mirrored on the other. Use it for tiling materials like kraft or a paper grain.
+        <code>Dieline</code> gives every face its own non-overlapping island. That's the
+        one artwork goes through.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Canvas</div>
+    <h2>Resolution per size</h2>
+    <p class="sub">
+      All four sizes share one square canvas, so the effective print resolution changes
+      with how much carton has to fit into it. Numbers are for the front panel.
+    </p>
+    <div class="tbl-scroll">
+      <table>
+        <thead>
+          <tr>
+            <th>Size</th><th class="num">W × D × H (in)</th><th class="num">Front panel (mm)</th>
+            <th class="num">Front panel @ 4K</th><th class="num">DPI @ 4K</th><th class="num">For print</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr><td><strong>Regular</strong></td><td class="num">7.75 × 2.5 × 12</td><td class="num">197 × 305</td><td class="num">1548 × 2397</td><td class="num">200</td><td class="num">8192</td></tr>
+          <tr><td><strong>Family</strong></td><td class="num">7.75 × 3 × 13</td><td class="num">197 × 330</td><td class="num">1476 × 2476</td><td class="num">191</td><td class="num">8192</td></tr>
+          <tr><td><strong>Mega</strong></td><td class="num">9.5 × 3.15 × 13.5</td><td class="num">241 × 343</td><td class="num">1538 × 2185</td><td class="num">162</td><td class="num">8192</td></tr>
+          <tr><td><strong>Mini</strong></td><td class="num">4 × 1.5 × 6.5</td><td class="num">102 × 165</td><td class="num">1489 × 2420</td><td class="num">372</td><td class="num">4096</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <p style="margin-top:18px">
+      4096 is fine for renders — 162 to 200&nbsp;DPI holds up well past the distance
+      anyone views a render from. It is <em>not</em> print resolution. Mega is the weak
+      one, because it packs the most carton into the same square; if a layout has to
+      survive both a render and a press, author it at 8192 and downsample for Blender.
+      Mini is the outlier in the other direction: a small carton in a full-size canvas
+      lands at 372&nbsp;DPI, effectively print-ready already.
+    </p>
+  </section>
+
+  <section>
+    <div class="eyebrow">Identity</div>
+    <h2>The masthead sits on a bone chip. Always.</h2>
+    <div class="split">
+      <div class="zonegrid" style="aspect-ratio:auto; max-width:340px; gap:0; padding:0; border:0; background:none">
+        <div style="background:var(--navy);border-radius:var(--radius);padding:26px;display:grid;gap:16px;place-items:center">
+          <div class="brandmark">DAYBREAK MILLS</div>
+          <div style="font-family:'IBM Plex Mono',monospace;font-size:11px;color:#93a1b6;text-align:center">
+            Mill Navy #16233A on Bone #F4EFE6
+          </div>
+        </div>
+      </div>
+      <div>
+        <p style="margin-top:0">
+          Six flavour fields means six different backgrounds for one logo, and no single
+          ink survives all of them. Navy on Cocoa Comets' brown is unreadable; navy on
+          Frosted Stars' blue is worse — the two are within a few degrees of hue.
+        </p>
+        <p>
+          So the mark never sits directly on the flavour field. It always rides a bone
+          chip, which gives it the same contrast on every one of the six. That single
+          rule is what makes the range read as a family on shelf.
+        </p>
+        <h3>Clear space and size</h3>
+        <p style="margin-bottom:0">
+          Clear space on all four sides equals the cap height of the wordmark. Minimum
+          chip width is 55&nbsp;mm on Regular, Family and Mega; 34&nbsp;mm on Mini. The
+          chip is a rectangle with a 2&nbsp;mm corner radius — never a rounded pill, never
+          knocked out to a silhouette.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Typography</div>
+    <h2>Four roles</h2>
+    <p class="sub">All available on Google Fonts, so the render pipeline and print pipeline can use identical files.</p>
+    <div class="tbl-scroll">
+      <table>
+        <thead>
+          <tr><th>Role</th><th>Typeface</th><th class="num">Size on Regular front</th><th>Notes</th></tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td><strong>Masthead</strong></td><td>Bricolage Grotesque 800</td>
+            <td class="num">26 mm cap height</td>
+            <td>Set once, then lock as outlines. Never re-typed per flavour.</td>
+          </tr>
+          <tr>
+            <td><strong>Flavour name</strong></td><td>Fraunces 700, soft optical</td>
+            <td class="num">18 mm cap height</td>
+            <td>The one place the range is allowed personality. Two words, never three.</td>
+          </tr>
+          <tr>
+            <td><strong>Claims &amp; body</strong></td><td>Figtree 400 / 600</td>
+            <td class="num">7 mm claim, 4 mm body</td>
+            <td>Sentence case. One claim flash per front panel, no stacking.</td>
+          </tr>
+          <tr>
+            <td><strong>Nutrition panel</strong></td><td>Archivo Narrow 400 / 700</td>
+            <td class="num">see below</td>
+            <td>Stands in for Helvetica Condensed on the right panel.</td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <div class="note">
+      <p><b>The nutrition panel is regulated, and not the way most people assume.</b></p>
+      <p>
+        The FDA does <em>not</em> mandate Helvetica — that's convention, not law. What it
+        does require is a typeface that isn't decorative, script or stylised, plus minimum
+        sizes: the calorie amount at 22&nbsp;pt, the word "Calories" at 16&nbsp;pt
+        (10&nbsp;pt allowed on small packages), servings and serving size at 10&nbsp;pt,
+        and "Amount Per Serving", "%DV" and the footnote at 6&nbsp;pt with 1&nbsp;pt
+        leading. "Nutrition Facts" must be larger than everything else in the panel except
+        the calorie figure. Design the right panel to those numbers from the start — it is
+        the one panel you cannot resolve by eye.
+      </p>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Colour</div>
+    <h2>The six flavours</h2>
+    <p class="sub">
+      Each flavour owns a field colour, a deep tone for type and shadow, and a light accent
+      for highlights and flashes. The field colours are the same six already assigned to
+      the boxes in the Blender scene, so a shader and its artwork stay in step.
+    </p>
+    <div class="flavours">
+
+      <article class="fl">
+        <div class="fl-face" style="background:#E9A32B;color:#3A2405">
+          <div class="fl-chip">DAYBREAK MILLS</div>
+          <div class="fl-name">Golden Flakes</div>
+          <div class="fl-form">Toasted corn flakes</div>
+        </div>
+        <div class="fl-body">
+          <p class="fl-claim">The original. Straight corn, nothing added but the toast.</p>
+          <div class="swatches">
+            <div class="sw" style="background:#E9A32B;color:#3A2405"><i>Field</i><span>E9A32B</span></div>
+            <div class="sw" style="background:#8A5410;color:#FFF3D6"><i>Deep</i><span>8A5410</span></div>
+            <div class="sw" style="background:#FFF3D6;color:#8A5410"><i>Accent</i><span>FFF3D6</span></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="fl">
+        <div class="fl-face" style="background:#4B2A19;color:#E8B87A">
+          <div class="fl-chip">DAYBREAK MILLS</div>
+          <div class="fl-name">Cocoa Comets</div>
+          <div class="fl-form">Cocoa puff spheres</div>
+        </div>
+        <div class="fl-body">
+          <p class="fl-claim">Dark cocoa spheres that hold their crunch in milk.</p>
+          <div class="swatches">
+            <div class="sw" style="background:#4B2A19;color:#E8B87A"><i>Field</i><span>4B2A19</span></div>
+            <div class="sw" style="background:#24120A;color:#E8B87A"><i>Deep</i><span>24120A</span></div>
+            <div class="sw" style="background:#E8B87A;color:#4B2A19"><i>Accent</i><span>E8B87A</span></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="fl">
+        <div class="fl-face" style="background:#C21E3A;color:#FFF0F3">
+          <div class="fl-chip">DAYBREAK MILLS</div>
+          <div class="fl-name">Wildberry Loops</div>
+          <div class="fl-form">Berry rings</div>
+        </div>
+        <div class="fl-body">
+          <p class="fl-claim">Four berries, four colours, one ring.</p>
+          <div class="swatches">
+            <div class="sw" style="background:#C21E3A;color:#FFF0F3"><i>Field</i><span>C21E3A</span></div>
+            <div class="sw" style="background:#6E0F20;color:#F7C9D2"><i>Deep</i><span>6E0F20</span></div>
+            <div class="sw" style="background:#F7C9D2;color:#6E0F20"><i>Accent</i><span>F7C9D2</span></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="fl">
+        <div class="fl-face" style="background:#D2A15E;color:#3E2A0E">
+          <div class="fl-chip">DAYBREAK MILLS</div>
+          <div class="fl-name">Honey Clusters</div>
+          <div class="fl-form">Oat &amp; honey clusters</div>
+        </div>
+        <div class="fl-body">
+          <p class="fl-claim">Whole oats baked into clusters with real honey.</p>
+          <div class="swatches">
+            <div class="sw" style="background:#D2A15E;color:#3E2A0E"><i>Field</i><span>D2A15E</span></div>
+            <div class="sw" style="background:#7E5A2A;color:#FBEEDA"><i>Deep</i><span>7E5A2A</span></div>
+            <div class="sw" style="background:#FBEEDA;color:#7E5A2A"><i>Accent</i><span>FBEEDA</span></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="fl">
+        <div class="fl-face" style="background:#1560B8;color:#DDEEFF">
+          <div class="fl-chip">DAYBREAK MILLS</div>
+          <div class="fl-name">Frosted Stars</div>
+          <div class="fl-form">Frosted star shapes</div>
+        </div>
+        <div class="fl-body">
+          <p class="fl-claim">The kids' one. Frosted points, loud blue, no apologies.</p>
+          <div class="swatches">
+            <div class="sw" style="background:#1560B8;color:#DDEEFF"><i>Field</i><span>1560B8</span></div>
+            <div class="sw" style="background:#0A3468;color:#BFE3FF"><i>Deep</i><span>0A3468</span></div>
+            <div class="sw" style="background:#BFE3FF;color:#0A3468"><i>Accent</i><span>BFE3FF</span></div>
+          </div>
+        </div>
+      </article>
+
+      <article class="fl">
+        <div class="fl-face" style="background:#4C7A35;color:#EAF4DC">
+          <div class="fl-chip">DAYBREAK MILLS</div>
+          <div class="fl-name">Sprouted Bran</div>
+          <div class="fl-form">Bran flakes &amp; seeds</div>
+        </div>
+        <div class="fl-body">
+          <p class="fl-claim">Sprouted wheat bran, sunflower and flax. The grown-up box.</p>
+          <div class="swatches">
+            <div class="sw" style="background:#4C7A35;color:#EAF4DC"><i>Field</i><span>4C7A35</span></div>
+            <div class="sw" style="background:#27401B;color:#DCEBC8"><i>Deep</i><span>27401B</span></div>
+            <div class="sw" style="background:#DCEBC8;color:#27401B"><i>Accent</i><span>DCEBC8</span></div>
+          </div>
+        </div>
+      </article>
+
+    </div>
+
+    <h3>Shared neutrals</h3>
+    <div class="tbl-scroll">
+      <table>
+        <thead><tr><th>Token</th><th class="num">Hex</th><th>Used for</th></tr></thead>
+        <tbody>
+          <tr><td><strong>Mill Navy</strong></td><td class="num">#16233A</td><td>Wordmark, all body copy, nutrition panel rules</td></tr>
+          <tr><td><strong>Bone</strong></td><td class="num">#F4EFE6</td><td>Masthead chip, right and bottom panel grounds</td></tr>
+          <tr><td><strong>Carton</strong></td><td class="num">#C3A377</td><td>Unprinted board, visible on flaps and inner edges</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Layout</div>
+    <h2>Front panel zones</h2>
+    <div class="split">
+      <div class="zonegrid" style="grid-template-rows: 2.6fr 2.2fr 6.4fr 1.9fr 1.4fr">
+        <div class="zone"><b>Masthead</b><span>rows 1–2</span></div>
+        <div class="zone"><b>Flavour name</b><span>rows 3–4</span></div>
+        <div class="zone"><b>Product shot</b><span>rows 5–11</span></div>
+        <div class="zone"><b>Claim flash</b><span>rows 12–13</span></div>
+        <div class="zone"><b>Net weight</b><span>rows 14–16</span></div>
+      </div>
+      <div>
+        <p style="margin-top:0">
+          The template carries a 12 × 16 grid on the front panel. Columns handle
+          horizontal rhythm; the sixteen rows split into five fixed zones, and every
+          flavour uses the same five. That consistency is the whole point — swap the field
+          colour and the product shot, and the range still reads as one family from across
+          an aisle.
+        </p>
+        <h3>Rules that don't bend</h3>
+        <ul class="check">
+          <li><b>Masthead never moves.</b> Same rows, same width, same chip on all six.</li>
+          <li><b>One claim flash.</b> If there are two things to say, the second one goes on the left panel.</li>
+          <li><b>Product shot floats.</b> No plate, no table edge, no drop shadow onto the field.</li>
+          <li><b>Net weight bottom-right,</b> always in Mill Navy, always Figtree 600.</li>
+          <li><b>The field colour bleeds.</b> No white border, no frame, no keyline around the panel.</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <section>
+    <div class="eyebrow">Pre-flight</div>
+    <h2>Before you export</h2>
+    <ul class="check">
+      <li><b>Template layers hidden</b> — fold lines, safe areas and the grid must not ship in the texture.</li>
+      <li><b>Canvas still 4096 × 4096,</b> square, opaque. Cropping to the net breaks the UV alignment.</li>
+      <li><b>Artwork bleeds past every fold line</b> into the neighbouring panel by at least 3&nbsp;mm.</li>
+      <li><b>Nothing live outside the dashed line</b> — 4&nbsp;mm in from every fold and trim.</li>
+      <li><b>Top and bottom flaps carry art,</b> even if it's just flat field colour. A white flap is instantly visible in a render.</li>
+      <li><b>The back panel reads right way up</b> when the box is turned over, not mirrored.</li>
+      <li><b>UV Map node set to <code>Dieline</code></b> in the Blender material, not CubeProject.</li>
+      <li><b>Colour space set to sRGB</b> on the Image Texture node — Blender guesses Non-Color for some PNGs.</li>
+    </ul>
+  </section>
+
+  <footer>
+    Daybreak Mills v1.0 · dielines generated from cereal_boxes.blend and verified against
+    its Dieline UVs · nutrition panel minimums per
+    <a href="https://www.ecfr.gov/current/title-21/chapter-I/subchapter-B/part-101/subpart-A/section-101.9">21 CFR 101.9</a>
+  </footer>
+
+</div>

@@ -1,0 +1,104 @@
+{
+  "format": "daybreak-job/1",
+  "created": "2026-09-03T15:47:35.024Z",
+  "texture": "daybreak_regular_bran_4096.png",
+  "box": {
+    "size": "Regular",
+    "inches": {
+      "W": 7.75,
+      "D": 2.5,
+      "H": 12
+    },
+    "mm": {
+      "W": 196.8,
+      "D": 63.5,
+      "H": 304.8
+    }
+  },
+  "flavour": {
+    "key": "bran",
+    "name": "Sprouted Bran",
+    "form": "Bran flakes & seeds",
+    "field": "#4C7A35",
+    "deep": "#27401B",
+    "accent": "#DCEBC8",
+    "blender_shader": "Cereal_06_OrganicGreen"
+  },
+  "copy": {
+    "brand": "DAYBREAK MILLS",
+    "flavour": "Sprouted Bran",
+    "claim": "12 g WHOLE GRAIN PER SERVING",
+    "weight": "340 g (12 oz)"
+  },
+  "brief": {
+    "audience": "adults",
+    "household": "1-2",
+    "channel": "grocery",
+    "positioning": "premium",
+    "occasion": "health"
+  },
+  "reasoning": [
+    "Regular +2 — Grocery multiples index on the standard 12 oz facing",
+    "Regular +2 — One or two people means staleness beats savings",
+    "Mini +1 — Small households over-index on single-serve",
+    "Regular +2 — Premium ranges hold price per pack down by keeping the pack smaller",
+    "honey +2 — 35–54 buys texture and substance over novelty",
+    "bran +2 — Adult breakfast leans to fibre",
+    "bran +4 — Health occasion maps directly onto the sprouted-bran SKU",
+    "bran +2 — Premium shoppers pay for provenance, not sugar"
+  ],
+  "art_direction": [
+    "Restraint. Small masthead, generous field, product shot floating with air around it.",
+    "Standard body scale is fine for this audience.",
+    "Standard 1.5 m shelf-read distance.",
+    "Front panel will be seen physically before digitally."
+  ],
+  "layout": {
+    "masthead_pct": 48,
+    "flavour_scale": 78,
+    "product_pct": 30,
+    "gradient": false,
+    "starburst": false
+  },
+  "uv_map": "Dieline",
+  "dieline_uv": {
+    "FRONT": {
+      "u0": 0,
+      "u1": 0.37804878048780494,
+      "v0": 0.2073170731707317,
+      "v1": 0.7926829268292683
+    },
+    "RIGHT": {
+      "u0": 0.37804878048780494,
+      "u1": 0.5,
+      "v0": 0.2073170731707317,
+      "v1": 0.7926829268292683
+    },
+    "BACK": {
+      "u0": 0.5,
+      "u1": 0.878048780487805,
+      "v0": 0.2073170731707317,
+      "v1": 0.7926829268292683
+    },
+    "LEFT": {
+      "u0": 0.878048780487805,
+      "u1": 1,
+      "v0": 0.2073170731707317,
+      "v1": 0.7926829268292683
+    },
+    "TOP": {
+      "u0": 0,
+      "u1": 0.37804878048780494,
+      "v0": 0.7926829268292683,
+      "v1": 0.9146341463414634
+    },
+    "BOTTOM": {
+      "u0": 0,
+      "u1": 0.37804878048780494,
+      "v0": 0.08536585365853655,
+      "v1": 0.2073170731707317
+    }
+  },
+  "texture_resolution": 4096,
+  "safe_area_mm": 4
+}

@@ -1,0 +1,102 @@
+{
+  "format": "daybreak-job/1",
+  "created": "2026-09-03T15:47:40.353Z",
+  "texture": "daybreak_mini_cocoa_4096.png",
+  "box": {
+    "size": "Mini",
+    "inches": {
+      "W": 4,
+      "D": 1.5,
+      "H": 6.5
+    },
+    "mm": {
+      "W": 101.6,
+      "D": 38.1,
+      "H": 165.1
+    }
+  },
+  "flavour": {
+    "key": "cocoa",
+    "name": "Cocoa Comets",
+    "form": "Cocoa puff spheres",
+    "field": "#4B2A19",
+    "deep": "#24120A",
+    "accent": "#E8B87A",
+    "blender_shader": "Cereal_02_CocoaBrown"
+  },
+  "copy": {
+    "brand": "DAYBREAK MILLS",
+    "flavour": "Cocoa Comets",
+    "claim": "GRAB & GO PORTION",
+    "weight": "37 g (1.3 oz)"
+  },
+  "brief": {
+    "audience": "teens",
+    "household": "1-2",
+    "channel": "convenience",
+    "positioning": "mainstream",
+    "occasion": "togo"
+  },
+  "reasoning": [
+    "Mini +4 — Forecourt and convenience shelves are depth-limited and single-serve led",
+    "Regular +2 — One or two people means staleness beats savings",
+    "Mini +1 — Small households over-index on single-serve",
+    "Mini +3 — On-the-go occasions need a pack that fits a bag",
+    "cocoa +3 — Teen preference skews to chocolate and higher intensity",
+    "honey +2 — Clusters survive being carried; flakes do not"
+  ],
+  "art_direction": [
+    "Balanced. Masthead reads first, flavour second, product shot carries the appetite appeal.",
+    "Standard body scale is fine for this audience.",
+    "Convenience facings are narrow and often partially blocked. Keep everything critical in the top third.",
+    "Front panel will be seen physically before digitally."
+  ],
+  "layout": {
+    "masthead_pct": 62,
+    "flavour_scale": 100,
+    "product_pct": 42,
+    "gradient": true,
+    "starburst": false
+  },
+  "uv_map": "Dieline",
+  "dieline_uv": {
+    "FRONT": {
+      "u0": 0,
+      "u1": 0.36363636363636365,
+      "v0": 0.20454545454545453,
+      "v1": 0.7954545454545454
+    },
+    "RIGHT": {
+      "u0": 0.36363636363636365,
+      "u1": 0.5,
+      "v0": 0.20454545454545453,
+      "v1": 0.7954545454545454
+    },
+    "BACK": {
+      "u0": 0.5,
+      "u1": 0.8636363636363636,
+      "v0": 0.20454545454545453,
+      "v1": 0.7954545454545454
+    },
+    "LEFT": {
+      "u0": 0.8636363636363636,
+      "u1": 1,
+      "v0": 0.20454545454545453,
+      "v1": 0.7954545454545454
+    },
+    "TOP": {
+      "u0": 0,
+      "u1": 0.36363636363636365,
+      "v0": 0.7954545454545454,
+      "v1": 0.9318181818181819
+    },
+    "BOTTOM": {
+      "u0": 0,
+      "u1": 0.36363636363636365,
+      "v0": 0.06818181818181818,
+      "v1": 0.20454545454545453
+    }
+  },
+  "texture_resolution": 4096,
+  "safe_area_mm": 4
+}

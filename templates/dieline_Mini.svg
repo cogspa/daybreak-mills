@@ -1,0 +1,92 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape" width="4096" height="4096" viewBox="0 0 4096 4096">
+  <title>Cereal box dieline — Mini</title>
+  <desc>Matches the "Dieline" UV map in cereal_boxes.blend. 4.0" x 1.5" x 6.5" (W x D x H). 14.6600 px/mm at 4096px. Front panel resolves to 372 DPI at final printed size.</desc>
+  <g id="background" inkscape:groupmode="layer" inkscape:label="00 background">
+    <rect x="0" y="0" width="4096" height="4096" fill="#e3e0d8"/>
+  </g>
+  <g id="panels" inkscape:groupmode="layer" inkscape:label="01 panels">
+    <rect id="panel-front" x="0.00" y="837.82" width="1489.45" height="2420.36" fill="#ffffff"/>
+    <rect id="panel-right" x="1489.45" y="837.82" width="558.55" height="2420.36" fill="#eef1f5"/>
+    <rect id="panel-back" x="2048.00" y="837.82" width="1489.45" height="2420.36" fill="#faf8f4"/>
+    <rect id="panel-left" x="3537.45" y="837.82" width="558.55" height="2420.36" fill="#eef1f5"/>
+    <rect id="panel-top" x="0.00" y="279.27" width="1489.45" height="558.55" fill="#e8eef0"/>
+    <rect id="panel-bottom" x="0.00" y="3258.18" width="1489.45" height="558.55" fill="#e8eef0"/>
+  </g>
+  <g id="grid" inkscape:groupmode="layer" inkscape:label="02 front grid 12x16" stroke="#b9c2cf" stroke-width="1">
+    <line x1="124.12" y1="837.82" x2="124.12" y2="3258.18"/>
+    <line x1="248.24" y1="837.82" x2="248.24" y2="3258.18"/>
+    <line x1="372.36" y1="837.82" x2="372.36" y2="3258.18"/>
+    <line x1="496.48" y1="837.82" x2="496.48" y2="3258.18"/>
+    <line x1="620.61" y1="837.82" x2="620.61" y2="3258.18"/>
+    <line x1="744.73" y1="837.82" x2="744.73" y2="3258.18"/>
+    <line x1="868.85" y1="837.82" x2="868.85" y2="3258.18"/>
+    <line x1="992.97" y1="837.82" x2="992.97" y2="3258.18"/>
+    <line x1="1117.09" y1="837.82" x2="1117.09" y2="3258.18"/>
+    <line x1="1241.21" y1="837.82" x2="1241.21" y2="3258.18"/>
+    <line x1="1365.33" y1="837.82" x2="1365.33" y2="3258.18"/>
+    <line x1="0.00" y1="989.09" x2="1489.45" y2="989.09"/>
+    <line x1="0.00" y1="1140.36" x2="1489.45" y2="1140.36"/>
+    <line x1="0.00" y1="1291.64" x2="1489.45" y2="1291.64"/>
+    <line x1="0.00" y1="1442.91" x2="1489.45" y2="1442.91"/>
+    <line x1="0.00" y1="1594.18" x2="1489.45" y2="1594.18"/>
+    <line x1="0.00" y1="1745.45" x2="1489.45" y2="1745.45"/>
+    <line x1="0.00" y1="1896.73" x2="1489.45" y2="1896.73"/>
+    <line x1="0.00" y1="2048.00" x2="1489.45" y2="2048.00"/>
+    <line x1="0.00" y1="2199.27" x2="1489.45" y2="2199.27"/>
+    <line x1="0.00" y1="2350.55" x2="1489.45" y2="2350.55"/>
+    <line x1="0.00" y1="2501.82" x2="1489.45" y2="2501.82"/>
+    <line x1="0.00" y1="2653.09" x2="1489.45" y2="2653.09"/>
+    <line x1="0.00" y1="2804.36" x2="1489.45" y2="2804.36"/>
+    <line x1="0.00" y1="2955.64" x2="1489.45" y2="2955.64"/>
+    <line x1="0.00" y1="3106.91" x2="1489.45" y2="3106.91"/>
+  </g>
+  <g id="folds" inkscape:groupmode="layer" inkscape:label="03 fold lines" fill="none" stroke="#8d96a5" stroke-width="3">
+    <rect x="0.00" y="837.82" width="1489.45" height="2420.36"/>
+    <rect x="1489.45" y="837.82" width="558.55" height="2420.36"/>
+    <rect x="2048.00" y="837.82" width="1489.45" height="2420.36"/>
+    <rect x="3537.45" y="837.82" width="558.55" height="2420.36"/>
+    <rect x="0.00" y="279.27" width="1489.45" height="558.55"/>
+    <rect x="0.00" y="3258.18" width="1489.45" height="558.55"/>
+  </g>
+  <g id="safe-area" inkscape:groupmode="layer" inkscape:label="04 safe area 4mm" fill="none" stroke="#c8543a" stroke-width="3" stroke-dasharray="26 20">
+    <rect x="58.64" y="896.46" width="1372.17" height="2303.08"/>
+    <rect x="1548.09" y="896.46" width="441.27" height="2303.08"/>
+    <rect x="2106.64" y="896.46" width="1372.17" height="2303.08"/>
+    <rect x="3596.09" y="896.46" width="441.27" height="2303.08"/>
+    <rect x="58.64" y="337.91" width="1372.17" height="441.27"/>
+    <rect x="58.64" y="3316.82" width="1372.17" height="441.27"/>
+  </g>
+  <g id="labels" inkscape:groupmode="layer" inkscape:label="05 labels" font-family="Helvetica, Arial, sans-serif" text-anchor="middle">
+    <text x="744.7" y="1974.3" font-size="81.9" font-weight="700" fill="#171a1f">FRONT</text>
+    <text x="744.7" y="2076.7" font-size="43.0" fill="#5b6472">102 × 165 mm</text>
+    <text x="744.7" y="2138.1" font-size="33.6" fill="#8d96a5">1489 × 2420 px</text>
+    <text x="744.7" y="2211.8" font-size="43.0" fill="#8d96a5">hero panel — logo, flavour, product shot</text>
+    <text x="1768.7" y="2012.0" font-size="45.1" font-weight="700" fill="#171a1f">RIGHT</text>
+    <text x="1768.7" y="2072.8" font-size="27.9" fill="#5b6472">38 × 165 mm</text>
+    <text x="1768.7" y="2106.6" font-size="27.9" fill="#8d96a5">558 × 2420 px</text>
+    <text x="2792.7" y="1974.3" font-size="81.9" font-weight="700" fill="#171a1f">BACK</text>
+    <text x="2792.7" y="2076.7" font-size="43.0" fill="#5b6472">102 × 165 mm</text>
+    <text x="2792.7" y="2138.1" font-size="33.6" fill="#8d96a5">1489 × 2420 px</text>
+    <text x="2792.7" y="2211.8" font-size="43.0" fill="#8d96a5">activity / story panel</text>
+    <text x="3816.7" y="2012.0" font-size="45.1" font-weight="700" fill="#171a1f">LEFT</text>
+    <text x="3816.7" y="2072.8" font-size="27.9" fill="#5b6472">38 × 165 mm</text>
+    <text x="3816.7" y="2106.6" font-size="27.9" fill="#8d96a5">558 × 2420 px</text>
+    <text x="744.7" y="484.8" font-size="81.9" font-weight="700" fill="#171a1f">TOP</text>
+    <text x="744.7" y="587.2" font-size="43.0" fill="#5b6472">102 × 38 mm</text>
+    <text x="744.7" y="648.7" font-size="33.6" fill="#8d96a5">1489 × 558 px</text>
+    <text x="744.7" y="722.4" font-size="43.0" fill="#8d96a5">flap — brand mark only</text>
+    <text x="744.7" y="3463.7" font-size="81.9" font-weight="700" fill="#171a1f">BOTTOM</text>
+    <text x="744.7" y="3566.1" font-size="43.0" fill="#5b6472">102 × 38 mm</text>
+    <text x="744.7" y="3627.6" font-size="33.6" fill="#8d96a5">1489 × 558 px</text>
+    <text x="744.7" y="3701.3" font-size="43.0" fill="#8d96a5">flap — barcode, batch code</text>
+  </g>
+  <g id="title-block" inkscape:groupmode="layer" inkscape:label="06 title block" font-family="Helvetica, Arial, sans-serif">
+    <text x="1580" y="197" font-size="55.3" font-weight="700" fill="#171a1f">CEREAL BOX DIELINE — MINI</text>
+    <text x="1580" y="303" font-size="33.6" fill="#5b6472">UV map: &apos;Dieline&apos;   canvas 4096 × 4096 px</text>
+    <text x="1580" y="354" font-size="33.6" fill="#5b6472">front panel 1489 × 2420 px  =  372 DPI at final size</text>
+    <text x="1580" y="406" font-size="33.6" fill="#5b6472">scale 14.660 px/mm    safe area 4 mm (59 px) inset, dashed red</text>
+    <text x="1580" y="457" font-size="33.6" fill="#5b6472">grey rules = fold lines   ·   light blue = 12×16 design grid on the front panel</text>
+    <text x="1580" y="508" font-size="33.6" fill="#5b6472">art must bleed to the panel edge; keep live matter inside the dashed line</text>
+  </g>
+</svg>

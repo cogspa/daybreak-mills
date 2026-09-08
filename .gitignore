@@ -1,0 +1,36 @@
+# HDRIs are large and CC0 — fetch them, don't commit them (see README)
+assets/*.hdr
+assets/*.exr
+
+# Blender
+*.blend1
+*.blend2
+daybreak_lineup.blend
+cereal_boxes.blend
+
+# renders and scratch
+jobs/renders/
+jobs/*.zip
+jobs/*_[0-9][0-9][0-9][0-9][0-9][0-9][0-9][0-9]-[0-9][0-9][0-9][0-9]*
+jobs/daybreak_matrix_*
+jobs/daybreak_range_*
+jobs/daybreak_deploy_*
+_preview/
+renders/
+
+# OS / editor
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+__pycache__/
+*.pyc
+dist/
+daybreak.config.json
+_backup/
+jobs/.history.json
+jobs/.processed.json
+jobs/.bridge.pid
+jobs/bridge.log
+jobs/status.html
+jobs/.bridge.port

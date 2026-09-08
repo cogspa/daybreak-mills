@@ -1,0 +1,96 @@
+{
+  "$comment": [
+    "Single source of truth for the Daybreak Mills system.",
+    "Right now the four sizes and six flavours are ALSO hardcoded in app/daybreak-studio.html,",
+    "blender/cereal_box_generator.py, blender/daybreak_pipeline.py and tools/make_dielines.py.",
+    "Collapsing those four copies onto this file is task 1 in PROMPT.md.",
+    "Dimensions are the real ones used by the major US brands, height x width x depth in inches."
+  ],
+  "version": "1.0.0",
+  "units": { "length": "inch", "derived": "metre", "inch_to_metre": 0.0254 },
+
+  "safe_area_mm": 4.0,
+  "bleed_mm": 3.0,
+  "bevel_m": 0.0018,
+  "uv_map": "Dieline",
+
+  "sizes": {
+    "Mini":    { "h": 6.5,  "w": 4.00, "d": 1.50, "net_weight": { "g": "37 g",  "oz": "1.3 oz" }, "note": "variety pack" },
+    "Regular": { "h": 12.0, "w": 7.75, "d": 2.50, "net_weight": { "g": "340 g", "oz": "12 oz"  }, "note": "the standard shelf facing" },
+    "Family":  { "h": 13.0, "w": 7.75, "d": 3.00, "net_weight": { "g": "510 g", "oz": "18 oz"  }, "note": "grows in depth, not height" },
+    "Mega":    { "h": 13.5, "w": 9.50, "d": 3.15, "net_weight": { "g": "765 g", "oz": "27 oz"  }, "note": "club / warehouse" }
+  },
+
+  "brand": {
+    "name": "DAYBREAK MILLS",
+    "navy": "#16233A",
+    "bone": "#F4EFE6",
+    "carton": "#C3A377",
+    "masthead_rule": "The wordmark always sits on a bone chip, never directly on the flavour field. Navy is unreadable on Cocoa Comets and near-invisible on Frosted Stars."
+  },
+
+  "flavours": {
+    "golden":  { "name": "Golden Flakes",   "form": "Toasted corn flakes",  "field": "#E9A32B", "deep": "#8A5410", "accent": "#FFF3D6", "on_field": "#3A2405", "blender_shader": "Cereal_01_CornGold" },
+    "cocoa":   { "name": "Cocoa Comets",    "form": "Cocoa puff spheres",   "field": "#4B2A19", "deep": "#24120A", "accent": "#E8B87A", "on_field": "#E8B87A", "blender_shader": "Cereal_02_CocoaBrown" },
+    "berry":   { "name": "Wildberry Loops", "form": "Berry rings",          "field": "#C21E3A", "deep": "#6E0F20", "accent": "#F7C9D2", "on_field": "#FFF0F3", "blender_shader": "Cereal_03_BerryRed" },
+    "honey":   { "name": "Honey Clusters",  "form": "Oat & honey clusters", "field": "#D2A15E", "deep": "#7E5A2A", "accent": "#FBEEDA", "on_field": "#3E2A0E", "blender_shader": "Cereal_04_HoneyOat" },
+    "frosted": { "name": "Frosted Stars",   "form": "Frosted star shapes",  "field": "#1560B8", "deep": "#0A3468", "accent": "#BFE3FF", "on_field": "#DDEEFF", "blender_shader": "Cereal_05_KidsBlue" },
+    "bran":    { "name": "Sprouted Bran",   "form": "Bran flakes & seeds",  "field": "#4C7A35", "deep": "#27401B", "accent": "#DCEBC8", "on_field": "#EAF4DC", "blender_shader": "Cereal_06_OrganicGreen" }
+  },
+
+  "dieline": {
+    "$comment": "The canonical unfolded net. Every implementation must produce these rectangles.",
+    "strip_order": ["FRONT", "RIGHT", "BACK", "LEFT"],
+    "flaps": { "TOP": "hinged above FRONT", "BOTTOM": "hinged below FRONT" },
+    "total_width_formula": "2*W + 2*D",
+    "total_height_formula": "H + 2*D",
+    "normalise": "k = 1 / max(total_w, total_h); offx = (1 - total_w*k)/2; offy = (1 - total_h*k)/2",
+    "panels_in_carton_space": {
+      "FRONT":  { "u0": "0",         "u1": "W",       "v0": "D",   "v1": "D+H" },
+      "RIGHT":  { "u0": "W",         "u1": "W+D",     "v0": "D",   "v1": "D+H" },
+      "BACK":   { "u0": "W+D",       "u1": "2W+D",    "v0": "D",   "v1": "D+H" },
+      "LEFT":   { "u0": "2W+D",      "u1": "2W+2D",   "v0": "D",   "v1": "D+H" },
+      "TOP":    { "u0": "0",         "u1": "W",       "v0": "D+H", "v1": "D+H+D" },
+      "BOTTOM": { "u0": "0",         "u1": "W",       "v0": "0",   "v1": "D" }
+    },
+    "panel_roles": {
+      "FRONT":  "hero — masthead, flavour name, product shot, claim flash, net weight",
+      "BACK":   "activity / story panel",
+      "RIGHT":  "nutrition facts + ingredients",
+      "LEFT":   "brand story, recipe, claims",
+      "TOP":    "flap — brand mark only",
+      "BOTTOM": "flap — barcode, batch code"
+    }
+  },
+
+  "nutrition_panel_minimums_pt": {
+    "$comment": "US FDA. Note the FDA does NOT mandate Helvetica — that is convention. What it forbids is decorative, script or stylised faces. See 21 CFR 101.9.",
+    "calories_amount": 22,
+    "calories_word": 16,
+    "calories_word_small_package": 10,
+    "servings_per_container": 10,
+    "serving_size": 10,
+    "amount_per_serving": 6,
+    "percent_dv_heading": 6,
+    "footnote": 6,
+    "footnote_leading": 1,
+    "nutrition_facts_heading": "larger than every other element except the calorie figure"
+  },
+
+  "typography": {
+    "masthead":      { "face": "Bricolage Grotesque", "weight": 800, "cap_height_mm_on_regular": 26 },
+    "flavour_name":  { "face": "Fraunces",            "weight": 700, "cap_height_mm_on_regular": 18 },
+    "claims_body":   { "face": "Figtree",             "weight": "400 / 600", "claim_mm": 7, "body_mm": 4 },
+    "nutrition":     { "face": "Archivo Narrow",      "weight": "400 / 700", "note": "stands in for Helvetica Condensed" }
+  },
+
+  "front_panel_grid": { "columns": 12, "rows": 16,
+    "zones": [
+      { "name": "Masthead",     "rows": "1-2" },
+      { "name": "Flavour name", "rows": "3-4" },
+      { "name": "Product shot", "rows": "5-11" },
+      { "name": "Claim flash",  "rows": "12-13" },
+      { "name": "Net weight",   "rows": "14-16" }
+    ]
+  }
+}
