@@ -4,6 +4,13 @@ Versions follow semver. `VERSION` at the repo root is the single source of
 truth; the app, the Python tools and every exported `job.json` carry it, and
 `tools/verify_geometry.py` fails if the app's inlined copy drifts from it.
 
+## 1.16.0 — 2026-09-09
+
+- Add a unified workspace with persistent live box, six-panel selection, contextual controls and integrated brief, brand and asset editing.
+- Add millimetre positioning, direct dragging, grid/edge snapping and image layer ordering, visibility and locks.
+- Add project-scoped undo/redo for artwork, copy, brief, brand and asset edits; preserve image IDs and layer settings in sessions.
+- Add workspace browser regression tests and document the Stage 3 controls.
+
 ## 1.15.0 — 2026-09-09
 
 - Add named projects, a thumbnail gallery, duplication, named checkpoints and previous-autosave recovery.

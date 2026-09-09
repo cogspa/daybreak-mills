@@ -7,7 +7,7 @@
 | --- | --- | --- | --- |
 | 1 | Security and baseline | Local bridge pairing, restricted Blender selection, upload validation, regression checks | Complete — v1.14.1 |
 | 2 | Projects and recovery | Named projects, gallery, duplication, checkpoints, autosave, recovery and legacy session migration | Complete — v1.15.0 |
-| 3 | Box-centered workspace | Brief/project starting screen, persistent live box, clickable panels, contextual editing, Edit asset tools, undo/redo and alignment | Planned |
+| 3 | Box-centered workspace | Brief/project starting screen, persistent live box, clickable panels, contextual editing, Edit asset tools, undo/redo and alignment | Complete — v1.16.0 |
 | 4 | Complete packaging content | Editable back copy, ingredients, nutrition, per-flavour overrides and overflow indicators | Planned |
 | 5 | Reliable export and rendering | Proof labeling, export checks, Blender queue, progress, cancellation, retry and version-linked results | Planned |
 | 6 | Production output and polish | Printer-specific exports, accessibility, keyboard controls and performance | Planned |
@@ -15,7 +15,7 @@
 Each stage ends with verified workflows, a reviewable release and focused commits
 pushed to its working branch. Stage numbers describe the delivery sequence, not
 the order of recommendations in the original review. Stage 2 builds on the
-Stage 1 branch; the box-centered editing redesign is scheduled for Stage 3.
+Stage 1 branch; Stage 3 builds on the verified project and recovery foundation.
 
 A packaging pipeline that runs from a demographic brief to a rendered carton and
 a print-ready dieline, without anything being redrawn by hand in between.
@@ -32,6 +32,36 @@ can be yours. No build step, no package manager, no network. Open the HTML
 file, run the Python.
 
 ---
+
+## Unified editing workspace
+
+The Studio opens on the current project with a live box and the selected panel
+side by side. A new project starts with the brief controls. **Projects** opens
+the gallery; **Brief** and **Brand** open controls beside the preview.
+
+- Click a visible box face or a panel button to select Front, Back, Left, Right,
+  Top or Bottom. Drag the box to orbit; scroll to zoom.
+- **Add image** places artwork on the selected panel. Select a layer in the list
+  or on the flat panel, then drag it or enter X/Y, width, height and rotation.
+  Coordinates are in millimetres from the panel's top-left corner. Image resizing
+  preserves its aspect ratio; brand zones define a contain-fit area.
+- Snap to the configured grid or panel edges/centre. Arrow keys move artwork
+  1 mm; Shift+arrow moves 10 mm. Lock position to prevent direct movement.
+- Image layers can be hidden, reordered or removed. Imported images sit above
+  product artwork and below the logo and pack copy. Brand layers have fixed
+  stacking positions and editable placement zones.
+- Select a front-panel brand layer and choose **Edit asset** for the existing
+  sketch/import tools. The live box stays visible. **Back to panel** returns to
+  placement. Front copy and layout controls appear in the panel inspector.
+- **Undo/Redo** or Cmd/Ctrl+Z and Shift+Cmd/Ctrl+Z cover copy, applied briefs,
+  brand changes, asset sketches/imports, layer changes and placement. History
+  groups continuous edits and keeps up to 30 changes, with a memory limit for
+  large artwork. Navigation and the preview camera are not artwork edits.
+  History belongs to the current project in this tab and resets on reopening or
+  switching projects; use named checkpoints for lasting versions.
+
+**Range proof**, **Export** and **Ads** remain separate output views. Structured
+back-panel and nutrition editing remain Stage 4 work.
 
 ## Run it
 

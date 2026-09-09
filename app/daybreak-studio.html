@@ -213,6 +213,29 @@
   #project-checkpoints{display:grid;gap:8px;margin-top:12px;font-size:12px;color:var(--text-2)}
   #project-message{min-height:24px;color:var(--spec);font-size:13px}
   @media(max-width:700px){.project-layout{grid-template-columns:1fr}}
+
+  [hidden],.ws-hidden{display:none!important}
+  #v-workspace.on{display:grid;grid-template-rows:auto minmax(0,1fr)}
+  .ws-toolbar{display:flex;gap:8px;align-items:center;padding:10px 16px;border-bottom:1px solid var(--line);background:var(--panel);flex-wrap:wrap}
+  .ws-toolbar .btn{width:auto;padding:6px 12px}.ws-toolbar strong{margin-right:auto}
+  .ws-body{display:grid;grid-template-columns:190px minmax(0,1fr) 290px;min-height:0}
+  .ws-sidebar,.ws-inspector{padding:16px;overflow:auto;background:var(--panel)}
+  .ws-sidebar{border-right:1px solid var(--line)}.ws-inspector{border-left:1px solid var(--line)}
+  .ws-panels{display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:22px}
+  .ws-panels button,.ws-layer{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;color:var(--text);padding:9px;cursor:pointer}
+  .ws-panels button[aria-pressed=true],.ws-layer[aria-pressed=true]{border-color:var(--spec);background:#382b29}
+  #ws-layers{display:grid;gap:7px;font-size:12px}.ws-layer{text-align:left;overflow-wrap:anywhere}
+  .ws-stage{display:grid;grid-template-columns:1fr 1fr;min-height:0;overflow:hidden;background:radial-gradient(ellipse at top,#243246,#10151d 70%)}
+  #ws-box{position:relative;min-width:0;min-height:300px}#ws-box canvas{display:block}
+  #ws-flat,#ws-drawing,#ws-brand-table{min-width:0;overflow:auto;padding:24px 14px;display:flex;flex-direction:column;align-items:center;justify-content:center;border-left:1px solid #293343}
+  #ws-canvas{display:block;max-width:100%;max-height:calc(100vh - 240px);width:auto;height:auto;touch-action:none;box-shadow:0 12px 36px #0007;cursor:move}
+  #ws-drawing .ad-pane{width:100%;flex:initial}.ws-inspector aside.side{border:0;padding:0;background:none;overflow:visible}
+  #ws-panel-title{text-transform:capitalize}.ws-numbers{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .ws-numbers label{font-size:11px;color:var(--text-2)}.ws-numbers input{width:100%;padding:7px;background:var(--panel-2);border:1px solid var(--line);border-radius:5px}
+  #ws-brand-table{display:block;justify-content:initial}#ws-brand-table #br-flavours{min-width:850px}
+  #ws-layout-tools aside h2,#ws-layout-tools aside>.hint{display:none}
+  @media(max-width:1100px){.ws-body{grid-template-columns:150px minmax(0,1fr) 250px}.ws-stage{grid-template-columns:1fr;grid-template-rows:minmax(180px,1fr) minmax(220px,1fr)}#ws-box{min-height:180px}#ws-canvas{max-height:28vh}#ws-flat{padding:12px}}
+  @media(max-width:760px){.ws-body{grid-template-columns:120px minmax(200px,1fr);overflow:auto}.ws-inspector{grid-column:1/-1}#ws-canvas{max-height:32vh}.ws-stage{min-height:480px}}
 </style>
 </head>
 <body>
@@ -221,13 +244,14 @@
     <div class="mark" id="hdr-mark">DAYBREAK MILLS</div>
     <span id="ver" style="font-family:var(--mono);font-size:11px;color:#7f8ca3"></span>
     <div class="tabs" role="tablist">
-      <button role="tab" data-tab="brand" aria-selected="false">0 · Brand</button>
-      <button role="tab" data-tab="assets" aria-selected="true">1 · Assets</button>
-      <button role="tab" data-tab="brief" aria-selected="false">2 · Brief</button>
-      <button role="tab" data-tab="art" aria-selected="false">3 · Artwork</button>
-      <button role="tab" data-tab="three" aria-selected="false">4 · 3D Proof</button>
-      <button role="tab" data-tab="out" aria-selected="false">5 · Export</button>
-      <button role="tab" data-tab="ads" aria-selected="false">6 · Ads</button>
+      <button role="tab" data-tab="workspace" aria-selected="true">Workspace</button>
+      <button role="tab" hidden data-tab="brand" aria-selected="false">Brand</button>
+      <button role="tab" hidden data-tab="assets" aria-selected="false">Edit assets</button>
+      <button role="tab" hidden data-tab="brief" aria-selected="false">Brief</button>
+      <button role="tab" hidden data-tab="art" aria-selected="false">Artwork</button>
+      <button role="tab" data-tab="three" aria-selected="false">Range proof</button>
+      <button role="tab" data-tab="out" aria-selected="false">Export</button>
+      <button role="tab" data-tab="ads" aria-selected="false">Ads</button>
     </div>
     <button class="btn alt" id="projects-open">Projects</button>
     <div class="status" id="status"></div>
@@ -235,6 +259,26 @@
   </header>
 
   <main>
+    <section class="view on" id="v-workspace">
+      <div class="ws-toolbar"><strong>Design workspace</strong><button class="btn alt" id="ws-brief">Brief</button><button class="btn alt" id="ws-brand">Brand</button><button class="btn alt" id="ws-undo" disabled>Undo</button><button class="btn alt" id="ws-redo" disabled>Redo</button></div>
+      <div class="ws-body">
+        <aside class="ws-sidebar"><span class="lab">Panels</span><div class="ws-panels"><button data-ws-panel="FRONT">Front</button><button data-ws-panel="BACK">Back</button><button data-ws-panel="LEFT">Left</button><button data-ws-panel="RIGHT">Right</button><button data-ws-panel="TOP">Top</button><button data-ws-panel="BOTTOM">Bottom</button></div>
+          <span class="lab">Image layers</span><p class="hint">Select a layer to position, hide or lock it.</p><div id="ws-layers"></div><button class="btn" id="ws-import" style="margin-top:14px">Add image</button><p class="hint" style="margin-top:12px">Imported images stack above product artwork and below the logo and pack copy.</p>
+        </aside>
+        <div class="ws-stage"><div id="ws-box"><span class="cv-note" style="position:absolute;bottom:12px;left:10px;right:10px;z-index:1;text-align:center;pointer-events:none">Drag to orbit · click a face to edit</span></div><div id="ws-flat"><canvas id="ws-canvas" aria-label="Selected panel artwork" tabindex="0"></canvas><p class="cv-note">Drag artwork · arrows nudge · Shift for 10 mm</p></div><div id="ws-drawing" hidden></div><div id="ws-brand-table" hidden></div></div>
+        <aside class="ws-inspector"><button class="btn alt" id="ws-back" hidden>Back to panel</button>
+          <div id="ws-layout-tools"><h2 id="ws-panel-title">Front panel</h2><p class="hint" id="ws-panel-size"></p>
+            <div id="ws-transform" hidden><span class="lab" id="ws-selected-name"></span><div class="ws-numbers"><label>X · mm<input id="ws-x" type="number" step="0.1"></label><label>Y · mm<input id="ws-y" type="number" step="0.1"></label><label>Width · mm<input id="ws-w" type="number" step="0.1"></label><label>Height · mm<input id="ws-h" type="number" step="0.1"></label><label>Rotation · °<input id="ws-rot" type="number" step="0.1"></label></div>
+              <label class="chk"><input type="checkbox" id="ws-visible" checked>Visible</label><label class="chk"><input type="checkbox" id="ws-locked">Lock position</label>
+              <div class="btnrow"><button class="btn alt" id="ws-up">Bring forward</button><button class="btn alt" id="ws-down">Send backward</button></div><button class="btn alt" id="ws-edit-asset" style="margin-top:8px">Edit asset</button><button class="btn alt" id="ws-delete" style="margin-top:8px">Remove image</button>
+            </div>
+            <div class="grp"><label class="chk"><input type="checkbox" id="ws-snap" checked>Snap to grid and panel edges</label><label for="ws-grid">Grid · mm</label><input id="ws-grid" type="number" value="1" min="0.1" max="20" step="0.1" style="width:70px;background:var(--panel-2);border:1px solid var(--line);padding:6px"></div>
+            <div id="ws-style-tools"></div>
+          </div><div id="ws-brief-tools" hidden></div><div id="ws-asset-tools" hidden></div><div id="ws-brand-tools" hidden></div>
+        </aside>
+      </div>
+    </section>
+
     <!-- ============ 0. BRAND ============ -->
     <section class="view split" id="v-brand">
       <aside class="side">
@@ -300,7 +344,7 @@
     </section>
 
     <!-- ============ 1. ASSETS ============ -->
-    <section class="view split on" id="v-assets">
+    <section class="view split" id="v-assets">
       <aside class="side">
         <h2>Asset designer</h2>
         <p class="hint">Sketch or import the logo, the character and a bowl per flavour. The brief places whatever is here; a slot left empty gets a placeholder.</p>
@@ -709,7 +753,7 @@
 </dialog>
 <script>
 "use strict";
-const APP_VERSION = "1.15.0";   /* keep equal to /VERSION — verify_geometry.py checks */
+const APP_VERSION = "1.16.0";   /* keep equal to /VERSION — verify_geometry.py checks */
 
 /* ==========================================================================
    GEOMETRY — identical maths to build_box_mesh() in the Blender scripts.
@@ -933,7 +977,10 @@ function projectReader(){
   reader.addEventListener('loadend',()=>{projectImports--;},{once:true});
   return reader;
 }
+const WS={ready:false,mode:'layout',drag:null,guides:[],glHome:null};
+const HISTORY={past:[],future:[],timer:null,paused:false,busy:false,pointer:false};
 const state = {
+  workspace:{panel:"FRONT",selection:null,snap:true,grid:1},layers:{},
   brief:{audience:"families", household:"3-4", channel:"grocery", positioning:"mainstream", occasion:"everyday"},
   rec:null, g:null,
   copy:{flavour:"", claim:"", weight:""},
@@ -999,6 +1046,7 @@ function drawNet(cv, S, opts){
 
   /* --- user images, clipped to their panel --- */
   for(const im of state.images){
+    if(im.hidden)continue;
     const r = R(im.panel);
     c.save();
     c.beginPath(); c.rect(r.x,r.y,r.w,r.h); c.clip();
@@ -1097,6 +1145,7 @@ function zoneRects(r, mm, sp){
 function zoneNormalise(r, a){ return {x:(a.x-r.x)/r.w, y:(a.y-r.y)/r.h, w:a.w/r.w, h:a.h/r.h}; }
 
 function drawMasthead(c, box, mm, F, colour){
+  if(state.layers.logo?.hidden)return;
   /* the logo if there is one, else the wordmark — straight on the field, no chip */
   if(state.assets.logo && HIDE_ZONE !== "logo"){ fitImage(c, state.assets.logo, box); return; }
   if(HIDE_ZONE === "logo") return;
@@ -1114,12 +1163,12 @@ function drawManagedAssets(c, R, mm, F, sp){
 
   c.save();
   c.beginPath(); c.rect(r.x, r.y, r.w, r.h); c.clip();
-  if(bowl && HIDE_ZONE !== "bowl") fitImage(c, bowl, Z.bowl);
-  if(state.assets.character && HIDE_ZONE !== "character")
+  if(bowl && !state.layers.bowl?.hidden && HIDE_ZONE !== "bowl") fitImage(c, bowl, Z.bowl);
+  if(state.assets.character && !state.layers.character?.hidden && HIDE_ZONE !== "character")
     fitImage(c, state.assets.character, Z.character, state.zones.character ? null : "left-bottom");
   c.restore();
 
-  if(state.assets.character && state.characterOnBack){
+  if(state.assets.character && !state.layers.character?.hidden && state.characterOnBack){
     const b = R("BACK");
     c.save();
     c.beginPath(); c.rect(b.x, b.y, b.w, b.h); c.clip();
@@ -1189,7 +1238,7 @@ function drawFront(c, r, mm, F, sp){
 
   /* dashed placeholder only when nothing at all occupies the product zone */
   const hasBowl = !!(state.assets.product[state.rec.flavKey] || state.assets.generic);
-  if(!hasBowl && !state.images.some(i=>i.panel==="FRONT")){
+  if(!hasBowl && !state.layers.bowl?.hidden && !state.images.some(i=>i.panel==="FRONT" && !i.hidden)){
     const z = L.product;
     c.save();
     c.strokeStyle = hexA(F.onField,.34); c.lineWidth = Math.max(1,0.7*mm);
@@ -1466,6 +1515,7 @@ function initGL(){
 /* Which boxes to show, and where. Same layout rule as arrange() in the
    pipeline: flavours across, sizes back to front, tallest at the back. */
 function proofPlan(){
+  if(wsActive())return [{fk:state.rec.flavKey,size:state.g.name,x:0,y:0}];
   const P = state.proof;
   const size = P.size || state.g.name, fk = P.flav || state.rec.flavKey;
   if(P.mode === "single") return [{fk, size, x:0, y:0}];
@@ -1518,14 +1568,14 @@ async function rebuildProof(){
     renderProofLabel();
   } finally {
     proofBuilding = false;
-    if(texDirty) rebuildProof();        /* something changed while we were drawing */
+    if(texDirty && !renderingWork && !flavourWork) rebuildProof();        /* something changed while we were drawing */
   }
 }
 
 function loopGL(){
   requestAnimationFrame(loopGL);
   if(!gl || !state.g) return;
-  const vis = document.getElementById("v-three").classList.contains("on");
+  const vis = wsActive() || document.getElementById("v-three").classList.contains("on");
   if(!vis) return;
   if(texDirty) rebuildProof();
   if(!proofBoxes.length) return;
@@ -1701,20 +1751,26 @@ function makeZip(entries){
 }
 
 /* ---------- the range: every flavour from the same brief, one zip ---------- */
-let flavourWork = 0;
-async function withFlavour(fk, sizeName, fn){
-  flavourWork++;
-  /* Temporarily swap the recommendation, keeping the brief and the layout.
-     Must AWAIT fn: with an async callback, a plain try/finally would restore
-     state after the first await and the job JSON would be written for the
-     wrong flavour — every job in a range came out "Frosted Stars" that way. */
-  const keep = {fk:state.rec.flavKey, F:state.rec.flavour, g:state.g, claim:state.spec.claim, copy:{...state.copy}};
-  state.rec.flavKey = fk; state.rec.flavour = FLAVOURS[fk]; state.g = geom(sizeName);
-  state.spec.claim = claimFor(state.rec.brief, fk);
-  state.copy = {flavour:"", claim:"", weight:""};          // typed overrides belong to one flavour only
-  try { return await fn(); }
-  finally { flavourWork--; state.rec.flavKey=keep.fk; state.rec.flavour=keep.F; state.g=keep.g; state.spec.claim=keep.claim; state.copy=keep.copy; }
+let flavourWork = 0, renderingWork = 0;
+let flavourQueue=Promise.resolve();
+function withFlavour(fk,sizeName,fn){
+  // Range, brand and ad previews share temporary artwork state. Serialize each
+  // swap so an asynchronous texture export cannot restore another preview's copy.
+  const task=flavourQueue.then(async()=>{
+    flavourWork++;
+    const keep={fk:state.rec.flavKey,F:state.rec.flavour,g:state.g,claim:state.spec.claim,copy:{...state.copy}};
+    state.rec.flavKey=fk;state.rec.flavour=FLAVOURS[fk];state.g=geom(sizeName);
+    state.spec.claim=claimFor(state.rec.brief,fk);state.copy={flavour:'',claim:'',weight:''};
+    try{return await fn();}
+    finally{state.rec.flavKey=keep.fk;state.rec.flavour=keep.F;state.g=keep.g;state.spec.claim=keep.claim;state.copy=keep.copy;flavourWork--;}
+  });
+  flavourQueue=task.catch(()=>{});return task;
 }
+function trackRendering(fn){return async function(...args){
+  renderingWork++;
+  try{return await fn.apply(this,args);}
+  finally{renderingWork--;if(!renderingWork && WS.ready)wsPaint();}
+};}
 
 async function exportRange(mode){
   const r = await buildRange(mode);
@@ -2231,9 +2287,12 @@ function pdfEsc(s){ return s.replace(/\\/g,"\\\\").replace(/\(/g,"\\(").replace(
 const $ = id => document.getElementById(id);
 
 function setTab(name){
+  if(WS.ready && ['art','assets','brief','brand'].includes(name)){wsMode({art:'layout',assets:'assets',brief:'brief',brand:'brand'}[name]);name='workspace';}
+  if(WS.ready && (name==='workspace' || name==='three')){(name==='workspace'?$('ws-box'):WS.glHome).append($('glCv'),$('g-label'));texDirty=true;}
+
   document.querySelectorAll(".tabs button").forEach(b=>
     b.setAttribute("aria-selected", String(b.dataset.tab===name)));
-  ["brand","assets","brief","art","three","out","ads"].forEach(t=>
+  ["workspace","brand","assets","brief","art","three","out","ads"].forEach(t=>
     $("v-"+t).classList.toggle("on", t===name));
   if(name==="brand") brandPreview();
   if(name==="ads") adsRenderPool();
@@ -2254,18 +2313,20 @@ function readBrief(){
   for(const k in briefIds) state.brief[k] = $(briefIds[k]).value;
 }
 function runBrief(){
+  if(SESSION.ready && !SESSION.restoring && !BR.applying)historyRecord(true);
   readBrief();
   const rec = recommend(state.brief);
   const so = $("b-size-override").value, fo = $("b-flavour-override").value;
   if(so) rec.size = so;
   if(fo){ rec.flavKey = fo; rec.flavour = FLAVOURS[fo]; }
+  state.appliedOverrides={size:so,flavour:fo};
   state.rec = rec;
   state.g = geom(rec.size);
   state.spec = {...rec.spec};
   state.proof.flav = ""; state.proof.size = "";       /* a new brief: the proof follows it again */
   renderBrief();
   syncSliders();
-  sessionTouch();
+  sessionTouch();if(WS.ready)redraw();
   return rec;
 }
 function renderBrief(){
@@ -2350,12 +2411,13 @@ $("file").addEventListener("change", e=>addFiles(e.target.files));
 $("drop").addEventListener("drop", e=>addFiles(e.dataTransfer.files));
 
 function addFiles(files){
+  const targetPanel=wsActive()?wsPanel():"FRONT";
   [...files].filter(f=>f.type.startsWith("image/")).forEach(f=>{
     const img = projectImage();
     img.onload = ()=>{
-      state.images.push({id:state.nextId++, img, name:f.name, panel:"FRONT",
+      state.images.push({id:state.nextId++, img, name:f.name, panel:targetPanel,
                          x:0.5, y:0.52, scale:62, rot:0, thumb:img.src});
-      state.sel = state.images[state.images.length-1].id;
+      state.sel = state.images[state.images.length-1].id;state.workspace.selection=state.sel;
       renderImgList(); redraw();
     };
     img.src = URL.createObjectURL(f);
@@ -2408,7 +2470,7 @@ $("i-fill").addEventListener("click", ()=>{
   const cv = $("dieCv");
   let drag = null;
   cv.addEventListener("pointerdown", e=>{
-    const im = selImg(); if(!im) return;
+    const im = selImg(); if(!im || im.locked) return;
     const b = cv.getBoundingClientRect();
     drag = {sx:e.clientX, sy:e.clientY, ox:im.x, oy:im.y, b};
     cv.classList.add("drag"); cv.setPointerCapture(e.pointerId);
@@ -2435,7 +2497,7 @@ function redraw(){
   $("status").innerHTML = `<b>${g.name}</b> · ${state.rec.flavour.name} · ${state.images.length} image${state.images.length===1?"":"s"}`;
   texDirty = true;
   adsInvalidate();               /* the artwork changed: ad box shots must re-render */
-  sessionTouch();
+  sessionTouch();wsRefresh();
 }
 
 /* --- 3D --- */
@@ -3089,10 +3151,7 @@ async function adDownload(key){
   document.querySelectorAll(".ad-tools [data-tool]").forEach(b=>b.addEventListener("click", ()=>setTool(b.dataset.tool)));
   $("ad-sym").addEventListener("click", ()=>{ AD.mirror = !AD.mirror; $("ad-sym").classList.toggle("on", AD.mirror); });
   $("ad-size").addEventListener("input", e=>{ AD.size = +e.target.value; $("ad-size-v").textContent = AD.size; });
-  $("ad-undo").addEventListener("click", ()=>{
-    const st = AD.undo[AD.slot]; if(!st || !st.length) return;
-    adCanvas(AD.slot).getContext("2d").putImageData(st.pop(), 0, 0); adShow(); adCommit();
-  });
+  $("ad-undo").addEventListener("click", ()=>historyStep());
   $("ad-clear").addEventListener("click", ()=>{ adSnapshot(); const cv = adCanvas(AD.slot); cv.getContext("2d").clearRect(0,0,cv.width,cv.height); adShow(); adCommit(); });
 
   cvEl.addEventListener("pointerdown", e=>{
@@ -3111,9 +3170,9 @@ async function adDownload(key){
   cvEl.addEventListener("pointerup", end); cvEl.addEventListener("pointercancel", end); cvEl.addEventListener("pointerleave", end);
 
   document.addEventListener("keydown", e=>{
-    if(!$("v-assets").classList.contains("on") || /input|select|textarea/i.test(e.target.tagName)) return;
+    if(!(wsActive() && WS.mode==="assets") || /input|select|textarea/i.test(e.target.tagName)) return;
     const k = e.key.toLowerCase();
-    if((e.metaKey || e.ctrlKey) && k === "z"){ e.preventDefault(); $("ad-undo").click(); return; }
+    if(e.metaKey || e.ctrlKey)return;
     if(k === "b") setTool("brush"); else if(k === "e") setTool("eraser"); else if(k === "f") setTool("fill");
     else if(k === "m") $("ad-sym").click();
     else if(k === "[") { $("ad-size").value = Math.max(2, AD.size-4); $("ad-size").dispatchEvent(new Event("input")); }
@@ -3506,10 +3565,10 @@ function brandReadEditor(){
   BRAND.slogans = $("br-slogans").value.split("\n").map(x=>x.trim().toUpperCase()).filter(Boolean);
 }
 function brandTouched(now){
-  if(BR.applying) return;
+  // Preserve typing while an earlier font or brand update is still applying.
   sessionTouch();
   clearTimeout(BR.t);
-  BR.t = setTimeout(async()=>{ BR.t=null; brandReadEditor(); await applyBrand(BRAND, {fromEditor:true}); sessionTouch(); }, now ? 0 : 350);
+  BR.t = setTimeout(async()=>{ if(BR.applying){brandTouched();return;} BR.t=null; brandReadEditor(); await applyBrand(BRAND, {fromEditor:true}); sessionTouch(); }, now ? 0 : 350);
 }
 async function brandPreview(){
   if(!state.rec) return;
@@ -3594,7 +3653,7 @@ function sessionSnapshot(){
   const toURL = img => img ? (img.src && img.src.startsWith("data:") ? img.src : imgToDataURL(img)) : null;
   return {
     format:"daybreak-session/1", generator_version:APP_VERSION, saved:new Date().toISOString(),
-    brand:brandSnapshot(),
+    brand:brandSnapshot(),workspace:{...state.workspace},layers:clone(state.layers),
     brief:{...state.brief}, overrides:{size:$("b-size-override").value, flavour:$("b-flavour-override").value},
     copy:{...state.copy}, spec:state.spec ? {...state.spec} : null, guides:state.guides,
     zones:{...state.zones}, assetScale:{...state.assetScale}, characterOnBack:state.characterOnBack,
@@ -3603,7 +3662,7 @@ function sessionSnapshot(){
             product:Object.fromEntries(Object.entries(A.product).map(([k,v])=>[k, toURL(v)])),
             dieline:Object.fromEntries(Object.entries(A.dieline || {}).map(([k,v])=>[k, toURL(v)]))},
     dielineMode:state.dielineMode,
-    images:state.images.map(i=>({name:i.name, panel:i.panel, x:i.x, y:i.y, scale:i.scale, rot:i.rot, src:toURL(i.img)})),
+    images:state.images.map(i=>({id:i.id,hidden:!!i.hidden,locked:!!i.locked,name:i.name, panel:i.panel, x:i.x, y:i.y, scale:i.scale, rot:i.rot, src:toURL(i.img)})),
     ads:{flav:$("ads-flav").value, bg:$("ads-bg").value, sloganMode:$("ads-slogan-mode").value, slogan:$("ads-slogan").value, claim:$("ads-claim").checked,
          poses:[...document.querySelectorAll("[data-pose]")].filter(e=>e.checked).map(e=>e.dataset.pose),
          aspects:[...document.querySelectorAll("[data-aspect]")].filter(e=>e.checked).map(e=>e.dataset.aspect)},
@@ -3612,7 +3671,7 @@ function sessionSnapshot(){
 function sessionTouch(){
   if(SESSION.restoring || !SESSION.ready) return;
   SESSION.dirty=true;SESSION.edit++;clearTimeout(SESSION.t);sessionPill();
-  SESSION.t=setTimeout(sessionAutosave,900);
+  SESSION.t=setTimeout(sessionAutosave,900);historySchedule();
 }
 function sessionAutosave(){
   return projectQueue(projectSave).catch(e=>{
@@ -3639,6 +3698,10 @@ async function sessionApply(snap){
   if(!snap || snap.format !== "daybreak-session/1") return false;
   SESSION.restoring = true;
   try {
+    state.workspace={panel:'FRONT',selection:null,snap:true,grid:1,...(snap.workspace || {})};
+    if(!PANELS.includes(state.workspace.panel))state.workspace.panel='FRONT';
+    state.workspace.grid=Math.max(.1,Math.min(20,Number(state.workspace.grid) || 1));state.workspace.snap=state.workspace.snap!==false;
+    state.layers=clone(snap.layers || {});
     if(snap.brand) await applyBrand(snap.brand, {quiet:true});
     for(const k in briefIds) if(snap.brief && snap.brief[k]) $(briefIds[k]).value = snap.brief[k];
     $("b-size-override").value = (snap.overrides||{}).size || "";
@@ -3665,8 +3728,8 @@ async function sessionApply(snap){
     state.dielineMode = snap.dielineMode || "replace"; $("ad-dieline-sel").value = state.dielineMode;
     /* dropped images */
     state.images = []; state.nextId = 1;
-    for(const it of (snap.images || [])){ const im = await loadImg(it.src); if(im) state.images.push({id:state.nextId++, img:im, name:it.name, panel:it.panel, x:it.x, y:it.y, scale:it.scale, rot:it.rot, thumb:it.src}); }
-    state.sel = null;
+    for(const it of (snap.images || [])){ const im = await loadImg(it.src); if(im) state.images.push({id:Number.isInteger(it.id)?it.id:state.nextId++,hidden:!!it.hidden,locked:!!it.locked,img:im, name:it.name, panel:it.panel, x:it.x, y:it.y, scale:it.scale, rot:it.rot, thumb:it.src}); }
+    state.nextId=Math.max(0,...state.images.map(i=>i.id))+1;state.sel=typeof state.workspace.selection==='number'?state.workspace.selection:null;
     /* ads panel */
     if(snap.ads){
       $("ads-flav").value = snap.ads.flav || "this"; $("ads-bg").value = snap.ads.bg || "field";
@@ -3710,14 +3773,14 @@ async function projectSettle(){
   // in the next project.
   const started=Date.now();
   do {
-    while(projectImports || flavourWork || BR.applying || ADS.busy){
+    while(projectImports || flavourWork || renderingWork || BR.applying || ADS.busy){
       if(Date.now()-started>30000) throw new Error('Finish the current import or render, then try again.');
       await new Promise(r=>setTimeout(r,25));
     }
     if(BR.t){clearTimeout(BR.t);BR.t=null;brandReadEditor();await applyBrand(BRAND,{fromEditor:true});}
     if(AD.commitT){clearTimeout(AD.commitT);AD.commitT=null;AD.pending=adCommitNow(AD.pendingKey);}
     if(AD.pending){await AD.pending;AD.pending=null;}
-  } while(projectImports || flavourWork || BR.applying || BR.t || AD.commitT);
+  } while(projectImports || flavourWork || renderingWork || BR.applying || BR.t || AD.commitT);
 }
 function projectThumbnail(){
   const net=document.createElement('canvas');drawNet(net,256,{guides:false});
@@ -3729,7 +3792,7 @@ function projectThumbnail(){
 function projectValidate(snap){
   if(!snap || snap.format!=='daybreak-session/1') throw new Error('Choose a Daybreak session file.');
   const s=clone(snap);
-  for(const k of ['brand','brief','copy','spec','zones','assets','assetScale','view','proof','light','ads','overrides']){
+  for(const k of ['brand','brief','copy','spec','zones','assets','assetScale','view','proof','light','ads','overrides','workspace','layers']){
     if(s[k]!=null && (typeof s[k]!=='object' || Array.isArray(s[k]))) throw new Error(`Invalid session ${k}.`);
   }
   if(s.brand){
@@ -3778,8 +3841,8 @@ async function projectActivate(record,create=false){
     });
   } catch(e){await sessionApply(previous);throw e;}
   SESSION.id=record.id;SESSION.name=record.name;SESSION.revision=record.revision;
-  SESSION.savedAt=record.updated;SESSION.dirty=false;SESSION.error='';SESSION.notice='';SESSION.edit++;
-  sessionPill();
+  SESSION.savedAt=record.updated;SESSION.dirty=false;SESSION.error='';SESSION.notice='';SESSION.edit++;historyReset();
+  if(WS.ready)wsMode('layout');sessionPill();
 }
 function projectRun(fn){
   return projectQueue(async()=>{
@@ -3788,7 +3851,7 @@ function projectRun(fn){
     $('project-controls').inert=true;
     try {
       await projectSettle();await projectSave();
-      const value=await fn();await projectRender();return value;
+      const value=await fn();await projectSettle();historyRecord();await projectRender();return value;
     } catch(e){SESSION.error=e.message || 'Could not save. Download a session backup before closing.';sessionPill();throw e;}
     finally {SESSION.busy=false;document.querySelector('.app').inert=false;$('project-controls').inert=false;}
   });
@@ -3797,7 +3860,7 @@ function projectCreate(name,snapshot){
   return projectRun(async()=>{
     const snap=projectValidate(snapshot || PROJECT_DEFAULT), now=new Date().toISOString();
     const rec={id:projectID(),name:projectName(name),created:now,updated:now,revision:1,snapshot:snap,thumbnail:'',recovery:null};
-    await projectActivate(rec,true);return rec.id;
+    await projectActivate(rec,true);if(!snapshot && WS.ready)wsMode('brief');return rec.id;
   });
 }
 function projectOpen(id){
@@ -3870,11 +3933,13 @@ async function projectBoot(){
   document.querySelector('.app').inert=true;
   try {
     await projectSettle();PROJECT_DEFAULT=sessionSnapshot();
+    let startingNew=false;
     const rec=await projectDB(['session','projects'],'readwrite',(tx,done)=>{
       const session=tx.objectStore('session'),projects=tx.objectStore('projects');
       const req=session.get('activeProject');req.onsuccess=()=>{
         if(req.result){const r=projects.get(req.result);r.onsuccess=()=>done(r.result);return;}
         const old=session.get('current');old.onsuccess=()=>{
+          startingNew=!old.result;
           const now=new Date().toISOString(),record={id:projectID(),name:old.result?'Recovered session':'Untitled project',created:now,updated:now,
             revision:1,snapshot:old.result || clone(PROJECT_DEFAULT),thumbnail:'',recovery:null};
           projects.add(record);session.put(record.id,'activeProject');done(record);
@@ -3884,7 +3949,7 @@ async function projectBoot(){
     });
     if(!rec) throw new Error('Saved project is unavailable. Your stored projects have not been changed.');
     await projectActivate(rec);
-    SESSION.ready=true;SESSION.error='';
+    SESSION.ready=true;SESSION.error='';historyReset();if(WS.ready)wsMode(startingNew?'brief':'layout');
   } catch(e){SESSION.error='Project storage unavailable: '+e.message+'. Download a session backup before closing.';SESSION.ready=true;}
   finally {document.querySelector('.app').inert=false;sessionPill();}
 }
@@ -3913,6 +3978,221 @@ document.addEventListener('visibilitychange',()=>{if(document.visibilityState===
 window.addEventListener('beforeunload',e=>{if(SESSION.dirty){e.preventDefault();e.returnValue='';}});
 
 
+/* The workspace edits the same state and canvases as the offline exporters. */
+function wsActive(){return $('v-workspace').classList.contains('on');}
+function wsPanel(){return state.workspace.panel;}
+function wsSelected(){
+  const key=state.workspace.selection;
+  if(typeof key==='number')return state.images.find(i=>i.id===key && i.panel===wsPanel());
+  return wsPanel()==='FRONT' && ['logo','character','bowl'].includes(key)?key:null;
+}
+function wsFlags(layer){return typeof layer==='string'?(state.layers[layer] || {}):layer || {};}
+function wsRect(layer){
+  const [pw,ph]=state.g.panelMM[wsPanel()];
+  if(typeof layer==='string')return zoneRects({x:0,y:0,w:pw,h:ph},1,state.spec)[layer];
+  const base=Math.min(pw,ph),ratio=layer.img.width/Math.max(layer.img.width,layer.img.height);
+  const w=base*layer.scale/100*ratio,h=w*layer.img.height/layer.img.width;
+  return {x:layer.x*pw-w/2,y:layer.y*ph-h/2,w,h,rot:layer.rot || 0};
+}
+function wsSetRect(layer,r){
+  const [pw,ph]=state.g.panelMM[wsPanel()];
+  if(typeof layer==='string')state.zones[layer]={x:r.x/pw,y:r.y/ph,w:r.w/pw,h:r.h/ph};
+  else {layer.x=(r.x+r.w/2)/pw;layer.y=(r.y+r.h/2)/ph;layer.scale=r.w/(Math.min(pw,ph)*layer.img.width/Math.max(layer.img.width,layer.img.height))*100;layer.rot=r.rot || 0;}
+}
+function wsSelectPanel(panel,face=false){
+  if(!PANELS.includes(panel))return;
+  state.workspace.panel=panel;state.workspace.selection=null;state.sel=null;
+  if(face){const angles={FRONT:[0,8],BACK:[180,8],RIGHT:[90,8],LEFT:[-90,8],TOP:[0,85],BOTTOM:[0,-85]};
+    [state.view.az,state.view.el]=angles[panel];state.view.spin=false;$('g-spin').checked=false;}
+  wsMode('layout');wsRefresh();
+}
+function wsSelect(key){
+  state.workspace.selection=key;state.sel=typeof key==='number'?key:null;wsMode('layout');wsRefresh();
+}
+function wsMode(mode){
+  WS.mode=mode;
+  for(const id of ['ws-layout-tools','ws-brief-tools','ws-asset-tools','ws-brand-tools'])$(id).hidden=true;
+  $({layout:'ws-layout-tools',brief:'ws-brief-tools',assets:'ws-asset-tools',brand:'ws-brand-tools'}[mode]).hidden=false;
+  $('ws-flat').hidden=mode==='assets' || mode==='brand';$('ws-drawing').hidden=mode!=='assets';$('ws-brand-table').hidden=mode!=='brand';
+  $('ws-back').hidden=mode==='layout';
+  if(mode==='assets'){adRenderSlots();adShow();adPreview();}
+  wsRefresh();
+}
+function wsRefresh(){
+  if(!WS.ready)return;
+  wsPaint();
+  $('ws-panel-title').textContent=wsPanel().toLowerCase()+' panel';
+  $('ws-panel-size').textContent=state.g.panelMM[wsPanel()].map(n=>n.toFixed(1)).join(' × ')+' mm';
+  document.querySelectorAll('[data-ws-panel]').forEach(b=>b.setAttribute('aria-pressed',String(b.dataset.wsPanel===wsPanel())));
+  $('ws-copy-tools').hidden=wsPanel()!=='FRONT';$('ws-layout-group').hidden=wsPanel()!=='FRONT';
+  const layer=wsSelected(),flags=wsFlags(layer);
+  $('ws-transform').hidden=!layer;
+  $('ws-selected-name').textContent=typeof layer==='string'?({logo:'Brand logo',character:'Character',bowl:'Product image'}[layer]):layer?.name || 'Select artwork';
+  $('ws-edit-asset').hidden=typeof layer!=='string';
+  if(layer){const r=wsRect(layer);
+    for(const k of ['x','y','w','h','rot']){const input=$('ws-'+k);if(document.activeElement!==input)input.value=(r[k] || 0).toFixed(1);input.disabled=!!flags.locked || k==='rot' && typeof layer==='string';}
+    $('ws-visible').checked=!flags.hidden;$('ws-locked').checked=!!flags.locked;
+    $('ws-delete').hidden=typeof layer==='string';
+    $('ws-delete').disabled=!!flags.locked;
+    $('ws-up').disabled=$('ws-down').disabled=typeof layer==='string' || !!flags.locked;
+  }
+  $('ws-snap').checked=state.workspace.snap;$('ws-grid').value=state.workspace.grid;
+  $('ws-layers').replaceChildren();
+  function row(key,name,hidden,locked){
+    const b=document.createElement('button');b.type='button';b.className='ws-layer';b.dataset.layer=String(key);
+    b.setAttribute('aria-pressed',String(state.workspace.selection===key));b.textContent=name+(hidden?' · hidden':'')+(locked?' · locked':'');
+    b.onclick=()=>wsSelect(key);$('ws-layers').append(b);
+  }
+  if(wsPanel()==='FRONT')row('logo','Brand logo',state.layers.logo?.hidden,state.layers.logo?.locked);
+  for(const im of [...state.images].reverse().filter(i=>i.panel===wsPanel()))row(im.id,im.name,im.hidden,im.locked);
+  if(wsPanel()==='FRONT')for(const key of ['character','bowl'])row(key,{logo:'Brand logo',character:'Character',bowl:'Product image'}[key],state.layers[key]?.hidden,state.layers[key]?.locked);
+  if(!$('ws-layers').children.length)$('ws-layers').textContent='No image layers on this panel yet.';
+  historyButtons();
+}
+function wsPaint(){
+  if(!WS.ready || !state.g || flavourWork || renderingWork)return;
+  const net=document.createElement('canvas');drawNet(net,1024,{guides:false});
+  const r=panelRect(state.g,wsPanel(),1024),cv=$('ws-canvas');
+  cv.width=Math.round(r.w*2);cv.height=Math.round(r.h*2);
+  const c=cv.getContext('2d');c.drawImage(net,r.x,r.y,r.w,r.h,0,0,cv.width,cv.height);
+  const [pw,ph]=state.g.panelMM[wsPanel()],sx=cv.width/pw,sy=cv.height/ph;
+  const layer=wsSelected();
+  if(layer){const b=wsRect(layer);c.save();c.translate((b.x+b.w/2)*sx,(b.y+b.h/2)*sy);c.rotate((b.rot || 0)*Math.PI/180);
+    c.strokeStyle=wsFlags(layer).locked?'#aaaaaa':'#ff9980';c.lineWidth=3;c.setLineDash(wsFlags(layer).hidden?[8,5]:[]);c.strokeRect(-b.w*sx/2,-b.h*sy/2,b.w*sx,b.h*sy);c.restore();}
+  c.strokeStyle='#62e0ba';c.lineWidth=2;
+  for(const guide of WS.guides){c.beginPath();if(guide.axis==='x'){c.moveTo(guide.at*sx,0);c.lineTo(guide.at*sx,cv.height);}else{c.moveTo(0,guide.at*sy);c.lineTo(cv.width,guide.at*sy);}c.stroke();}
+}
+function wsPoint(e){const b=$('ws-canvas').getBoundingClientRect(),[w,h]=state.g.panelMM[wsPanel()];return {x:(e.clientX-b.left)/b.width*w,y:(e.clientY-b.top)/b.height*h};}
+function wsHit(p){
+  const layers=[...state.images].reverse().filter(i=>i.panel===wsPanel());
+  if(wsPanel()==='FRONT')layers.push('logo','character','bowl');
+  return layers.find(layer=>{if(wsFlags(layer).hidden)return false;const r=wsRect(layer),a=-(r.rot || 0)*Math.PI/180,dx=p.x-r.x-r.w/2,dy=p.y-r.y-r.h/2;
+    return Math.abs(dx*Math.cos(a)-dy*Math.sin(a))<=r.w/2 && Math.abs(dx*Math.sin(a)+dy*Math.cos(a))<=r.h/2;});
+}
+function wsSnap(value,size,extent,axis){
+  if(!state.workspace.snap)return value;
+  const grid=state.workspace.grid,result=Math.round(value/grid)*grid;
+  let best=result,distance=Math.abs(result-value),guide=null;
+  for(const target of [0,extent/2,extent])for(const offset of [0,size/2,size]){
+    const d=Math.abs(target-offset-value);if(d<=Math.min(2.5,distance)){best=target-offset;distance=d;guide=target;}
+  }
+  if(guide!==null)WS.guides.push({axis,at:guide});return best;
+}
+function wsNumeric(key,value){
+  const layer=wsSelected();if(!layer || wsFlags(layer).locked || !Number.isFinite(value))return;
+  const r=wsRect(layer),ratio=r.w/r.h;
+  if(key==='w'){r.w=Math.max(.5,Math.min(2000,value));if(typeof layer!=='string')r.h=r.w/ratio;}
+  else if(key==='h'){r.h=Math.max(.5,Math.min(2000,value));if(typeof layer!=='string')r.w=r.h*ratio;}
+  else r[key]=Math.max(-2000,Math.min(2000,value));
+  wsSetRect(layer,r);redraw();
+}
+function wsOrder(direction){
+  const layer=wsSelected();if(!layer || typeof layer==='string' || layer.locked)return;
+  const peers=state.images.filter(i=>i.panel===layer.panel),index=peers.indexOf(layer),other=peers[index+direction];if(!other)return;
+  const a=state.images.indexOf(layer),b=state.images.indexOf(other);[state.images[a],state.images[b]]=[state.images[b],state.images[a]];redraw();
+}
+function wsPickFace(px,py){
+  if(!cam || !proofBoxes.length)return null;
+  const V=cam.view,nx=[V[0],V[4],V[8]],ny=[V[1],V[5],V[9]],nz=[V[2],V[6],V[10]];
+  const sx=(px/cam.w*2-1)*cam.tanHalf*cam.aspect,sy=(1-py/cam.h*2)*cam.tanHalf;
+  const d=norm(nx.map((v,i)=>sx*v+sy*ny[i]-nz[i])),o=cam.eye,g=state.g;
+  const min=[-g.W/2,-g.D/2,0],max=[g.W/2,g.D/2,g.H];let best=Infinity,face=null;
+  for(const [axis,side,name] of [[0,0,'LEFT'],[0,1,'RIGHT'],[1,0,'FRONT'],[1,1,'BACK'],[2,0,'BOTTOM'],[2,1,'TOP']]){
+    if(Math.abs(d[axis])<1e-8)continue;const t=((side?max:min)[axis]-o[axis])/d[axis];
+    if(t<=0 || t>=best)continue;const p=o.map((v,i)=>v+d[i]*t);
+    if(p.every((v,i)=>v>=min[i]-1e-7 && v<=max[i]+1e-7)){best=t;face=name;}
+  }return face;
+}
+function historyJSON(){const s=sessionSnapshot();s.overrides={...state.appliedOverrides};for(const key of ['saved','workspace','view','proof'])delete s[key];return JSON.stringify(s);}
+function historyButtons(){if(!WS.ready)return;$('ws-undo').disabled=HISTORY.busy || HISTORY.past.length<2;$('ws-redo').disabled=HISTORY.busy || !HISTORY.future.length;}
+function historyReset(){clearTimeout(HISTORY.timer);HISTORY.past=[historyJSON()];HISTORY.future=[];historyButtons();}
+function historyRecord(force=false){
+  if(!SESSION.ready || SESSION.restoring || HISTORY.paused)return;
+  if(!force && (flavourWork || renderingWork || HISTORY.pointer || projectImports || AD.commitT || BR.t || BR.applying))return;
+  const json=historyJSON();if(HISTORY.past.at(-1)===json)return;
+  HISTORY.past.push(json);HISTORY.future=[];
+  while(HISTORY.past.length>31 || HISTORY.past.length>2 && HISTORY.past.reduce((n,s)=>n+s.length*2,0)>64*1024*1024)HISTORY.past.shift();
+  historyButtons();
+}
+function historySchedule(){
+  if(HISTORY.paused)return;clearTimeout(HISTORY.timer);
+  HISTORY.timer=setTimeout(()=>{projectQueue(async()=>{await projectSettle();historyRecord();}).catch(()=>{});},450);
+}
+function historyStep(redo=false){
+  return projectQueue(async()=>{
+    clearTimeout(HISTORY.timer);HISTORY.busy=true;document.querySelector('.app').inert=true;
+    try {
+      WS.drag=null;HISTORY.pointer=false;
+      if(AD.drawing){AD.drawing=false;adCommit();}
+      await projectSettle();historyRecord(true);
+      const source=redo?HISTORY.future:HISTORY.past;
+      if(redo?!source.length:source.length<2)return;
+      const target=redo?source.at(-1):source.at(-2);
+      HISTORY.paused=true;
+      const snapshot=JSON.parse(target);Object.assign(snapshot,{workspace:{...state.workspace},view:{...state.view},proof:{...state.proof}});
+      await projectApply(snapshot);
+      if(redo)HISTORY.past.push(HISTORY.future.pop());else HISTORY.future.push(HISTORY.past.pop());
+      SESSION.dirty=true;SESSION.edit++;await projectSave();wsRefresh();
+    } catch(e){SESSION.error=e.message;sessionPill();}
+    finally{HISTORY.busy=false;HISTORY.paused=false;document.querySelector('.app').inert=false;historyButtons();}
+  });
+}
+function initWorkspace(){
+  WS.glHome=$('glCv').parentElement;
+  const art=$('v-art').querySelector('aside');
+  $('ws-style-tools').append(art);art.classList.add('ws-embedded');
+  for(const [id,text] of [['c-flavour','Flavour name'],['c-claim','Claim'],['c-weight','Net weight']]){const label=document.createElement('label');label.htmlFor=id;label.textContent=text;label.className='lab';$(id).before(label);}
+  $('c-flavour').closest('.grp').id='ws-copy-tools';$('l-mast').closest('.grp').id='ws-layout-group';
+  $('drop').closest('.grp').hidden=true;$('img-controls').classList.add('ws-hidden');
+  $('ws-brief-tools').append($('v-brief').querySelector('aside'));
+  $('ws-asset-tools').append($('v-assets').querySelector('aside'));
+  $('ws-drawing').append($('adCv').closest('.ad-pane'));
+  $('ws-brand-tools').append($('v-brand').querySelector('aside'));
+  $('ws-brand-table').append($('br-flavours'),$('br-add'));
+  WS.ready=true;setTab('workspace');wsRefresh();
+  document.querySelectorAll('[data-ws-panel]').forEach(b=>b.onclick=()=>wsSelectPanel(b.dataset.wsPanel,true));
+  $('ws-brief').onclick=()=>wsMode('brief');$('ws-brand').onclick=()=>wsMode('brand');$('ws-back').onclick=()=>wsMode('layout');
+  $('ws-edit-asset').onclick=()=>{const layer=wsSelected();AD.slot=layer==='bowl'?'product:'+state.rec.flavKey:layer;wsMode('assets');};
+  $('ws-import').onclick=()=>$('file').click();
+  for(const k of ['x','y','w','h','rot'])$('ws-'+k).addEventListener('input',e=>{if(e.target.value!=='')wsNumeric(k,+e.target.value);});
+  for(const [id,key,invert] of [['ws-visible','hidden',true],['ws-locked','locked',false]])$(id).onchange=e=>{
+    const layer=wsSelected();if(!layer)return;if(typeof layer==='string')state.layers[layer]={...state.layers[layer],[key]:invert?!e.target.checked:e.target.checked};else layer[key]=invert?!e.target.checked:e.target.checked;redraw();};
+  $('ws-delete').onclick=()=>{const layer=wsSelected();if(layer && typeof layer!=='string' && !layer.locked){state.images=state.images.filter(i=>i!==layer);state.workspace.selection=null;state.sel=null;redraw();}};
+  $('ws-up').onclick=()=>wsOrder(1);$('ws-down').onclick=()=>wsOrder(-1);
+  $('ws-snap').onchange=e=>{state.workspace.snap=e.target.checked;sessionTouch();};
+  $('ws-grid').onchange=e=>{state.workspace.grid=Math.max(.1,Math.min(20,+e.target.value || 1));sessionTouch();};
+  $('ws-undo').onclick=()=>historyStep();$('ws-redo').onclick=()=>historyStep(true);
+  const cv=$('ws-canvas');
+  cv.addEventListener('pointerdown',e=>{const p=wsPoint(e),layer=wsHit(p);if(!layer)return;wsSelect(typeof layer==='string'?layer:layer.id);if(wsFlags(layer).locked)return;
+    WS.drag={layer,start:p,rect:wsRect(layer)};cv.setPointerCapture(e.pointerId);e.preventDefault();});
+  cv.addEventListener('pointermove',e=>{if(!WS.drag)return;const p=wsPoint(e),d=WS.drag,[w,h]=state.g.panelMM[wsPanel()];WS.guides=[];
+    wsSetRect(d.layer,{...d.rect,x:wsSnap(d.rect.x+p.x-d.start.x,d.rect.w,w,'x'),y:wsSnap(d.rect.y+p.y-d.start.y,d.rect.h,h,'y')});redraw();});
+  const end=e=>{if(!WS.drag)return;if(e.type==='pointercancel')wsSetRect(WS.drag.layer,WS.drag.rect);WS.drag=null;WS.guides=[];redraw();};
+  cv.addEventListener('pointerup',end);cv.addEventListener('pointercancel',end);
+  let down=null;$('glCv').addEventListener('pointerdown',e=>{down=[e.clientX,e.clientY];});
+  $('glCv').addEventListener('pointerup',e=>{if(wsActive() && down && Math.hypot(e.clientX-down[0],e.clientY-down[1])<4){const r=e.currentTarget.getBoundingClientRect(),panel=wsPickFace(e.clientX-r.left,e.clientY-r.top);if(panel)wsSelectPanel(panel);}down=null;});
+  document.addEventListener('keydown',e=>{
+    if(e.defaultPrevented || $('project-dialog').open)return;
+    if((e.metaKey || e.ctrlKey) && (e.key.toLowerCase()==='z' || e.key.toLowerCase()==='y')){e.preventDefault();historyStep(e.shiftKey || e.key.toLowerCase()==='y');return;}
+    if(!wsActive() || WS.mode!=='layout' || /input|textarea|select/i.test(e.target.tagName))return;
+    const layer=wsSelected();if(!layer || wsFlags(layer).locked)return;
+    if(e.key==='Delete' || e.key==='Backspace'){e.preventDefault();$('ws-delete').click();return;}
+    const delta={ArrowLeft:[-1,0],ArrowRight:[1,0],ArrowUp:[0,-1],ArrowDown:[0,1]}[e.key];
+    if(delta){e.preventDefault();const r=wsRect(layer),step=e.shiftKey?10:1;r.x+=delta[0]*step;r.y+=delta[1]*step;wsSetRect(layer,r);redraw();}
+  });
+  document.addEventListener('pointerdown',e=>{historyRecord();HISTORY.pointer=!!e.target.closest('canvas,input[type="range"]');},true);
+  for(const ev of ['pointerup','pointercancel'])document.addEventListener(ev,()=>{HISTORY.pointer=false;historySchedule();});
+  document.addEventListener('click',()=>historyRecord(),true);
+}
+
+
+// Track whole batches, including the gaps between their individual flavour swaps.
+brandPreview=trackRendering(brandPreview);
+renderRangeStrip=trackRendering(renderRangeStrip);
+rebuildProof=trackRendering(rebuildProof);
+buildRange=trackRendering(buildRange);
+buildSingle=trackRendering(buildSingle);
+
 /* --- boot --- */
 $("ver").textContent = "v" + APP_VERSION;
 runBrief();
@@ -3924,6 +4204,7 @@ redraw();
 initGL();
 adShow(); adPreview();       /* the designer initialised before the brief ran; size its canvas to the zone now */
 brandFillEditor();
+initWorkspace();
 projectBoot();
 </script>
 </body>

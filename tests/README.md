@@ -38,3 +38,13 @@ single-session migration, gallery naming, independent projects, duplication,
 checkpoints, autosave recovery, embedded assets, camera restoration, invalid
 imports, quota errors and retry, conflicting tabs, pending sketches, save races
 and reopening. It uses a disposable browser context, never the user's profile.
+
+
+## Stage 3 workspace
+
+Run `node tests/workspace.cjs` using the same isolated Playwright setup. It checks
+persistent 3D and panel previews, all six panel controls and face picking,
+contextual numeric controls, aspect ratio, locking, layer order and visibility,
+snapped pointer dragging, copy/brief/asset undo and redo, redo invalidation,
+project history isolation and saved layer IDs after reopening. The screenshot
+is written to a temporary folder for visual review.
