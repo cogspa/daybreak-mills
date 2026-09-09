@@ -236,6 +236,13 @@
   #ws-layout-tools aside h2,#ws-layout-tools aside>.hint{display:none}
   @media(max-width:1100px){.ws-body{grid-template-columns:150px minmax(0,1fr) 250px}.ws-stage{grid-template-columns:1fr;grid-template-rows:minmax(180px,1fr) minmax(220px,1fr)}#ws-box{min-height:180px}#ws-canvas{max-height:28vh}#ws-flat{padding:12px}}
   @media(max-width:760px){.ws-body{grid-template-columns:120px minmax(200px,1fr);overflow:auto}.ws-inspector{grid-column:1/-1}#ws-canvas{max-height:32vh}.ws-stage{min-height:480px}}
+#ws-content-tools input:not([type="checkbox"]), #ws-content-tools textarea, #ws-content-tools select {width:100%;box-sizing:border-box;background:var(--panel-2);color:var(--text);border:1px solid var(--line);border-radius:5px;padding:8px;font:inherit;}
+#ws-content-tools > label {display:block;margin-top:12px;margin-bottom:5px;}
+#ws-content-tools .row > label {display:block;margin-bottom:5px;}
+#ws-content-tools input:invalid {outline:2px solid #ff8266;}
+#ws-content-tools input:disabled, #ws-content-tools textarea:disabled {opacity:.6;}
+#ws-content-status details {margin-top:8px;}
+#ws-content-status summary {cursor:pointer;}
 </style>
 </head>
 <body>
@@ -273,7 +280,7 @@
               <div class="btnrow"><button class="btn alt" id="ws-up">Bring forward</button><button class="btn alt" id="ws-down">Send backward</button></div><button class="btn alt" id="ws-edit-asset" style="margin-top:8px">Edit asset</button><button class="btn alt" id="ws-delete" style="margin-top:8px">Remove image</button>
             </div>
             <div class="grp"><label class="chk"><input type="checkbox" id="ws-snap" checked>Snap to grid and panel edges</label><label for="ws-grid">Grid · mm</label><input id="ws-grid" type="number" value="1" min="0.1" max="20" step="0.1" style="width:70px;background:var(--panel-2);border:1px solid var(--line);padding:6px"></div>
-            <div id="ws-style-tools"></div>
+            <div id="ws-content-status" role="status" aria-live="polite" class="hint"></div><div id="ws-content-tools" class="grp"></div><div id="ws-style-tools"></div>
           </div><div id="ws-brief-tools" hidden></div><div id="ws-asset-tools" hidden></div><div id="ws-brand-tools" hidden></div>
         </aside>
       </div>
@@ -753,7 +760,7 @@
 </dialog>
 <script>
 "use strict";
-const APP_VERSION = "1.16.0";   /* keep equal to /VERSION — verify_geometry.py checks */
+const APP_VERSION = "1.17.0";   /* keep equal to /VERSION — verify_geometry.py checks */
 
 /* ==========================================================================
    GEOMETRY — identical maths to build_box_mesh() in the Blender scripts.
@@ -767,6 +774,7 @@ const SIZES = {
   Family:  {h:13.0, w:7.75, d:3.00, oz:"18 oz",   g:"510 g"},
   Mega:    {h:13.5, w:9.50, d:3.15, oz:"27 oz",   g:"765 g"},
 };
+const CONTENT_SPEC = {"body_pt":10,"title_pt":18,"nutrition_body_pt":8,"nutrition_title_pt":24,"line_height":1.25,"gap_mm":2,"nutrients":[["fat","Total Fat","g"],["saturatedFat","Saturated Fat","g"],["transFat","Trans Fat","g"],["cholesterol","Cholesterol","mg"],["sodium","Sodium","mg"],["carbohydrate","Total Carbohydrate","g"],["fiber","Dietary Fiber","g"],["sugars","Total Sugars","g"],["addedSugars","Added Sugars","g"],["protein","Protein","g"],["vitaminD","Vitamin D","mcg"],["calcium","Calcium","mg"],["iron","Iron","mg"],["potassium","Potassium","mg"]],"safe_mm":4.0,"nutrition_minimums":{"$comment":"US FDA. Note the FDA does NOT mandate Helvetica \u2014 that is convention. What it forbids is decorative, script or stylised faces. See 21 CFR 101.9.","calories_amount":22,"calories_word":16,"calories_word_small_package":10,"servings_per_container":10,"serving_size":10,"amount_per_serving":6,"percent_dv_heading":6,"footnote":6,"footnote_leading":1,"nutrition_facts_heading":"larger than every other element except the calorie figure"}};
 const PANELS = ["FRONT","RIGHT","BACK","LEFT","TOP","BOTTOM"];
 
 function geom(sizeName){
@@ -984,6 +992,7 @@ const state = {
   brief:{audience:"families", household:"3-4", channel:"grocery", positioning:"mainstream", occasion:"everyday"},
   rec:null, g:null,
   copy:{flavour:"", claim:"", weight:""},
+  content:{shared:{},flavours:{}},
   spec:null,
   images:[],  sel:null, nextId:1,
   /* managed brand assets: filled by the assets folder, placed by the brief */
@@ -1172,9 +1181,9 @@ function drawManagedAssets(c, R, mm, F, sp){
     const b = R("BACK");
     c.save();
     c.beginPath(); c.rect(b.x, b.y, b.w, b.h); c.clip();
-    const size = b.h*0.42;
+    const size = Math.min(b.w*.6,b.h*.27);
     fitImage(c, state.assets.character,
-             {x: b.x + b.w - size - 4*mm, y: b.y + b.h*0.12, w: size, h: size});
+             {x: b.x + b.w - size - 4*mm, y: b.y + b.h - size - 4*mm, w: size, h: size});
     c.restore();
   }
 }
@@ -1254,60 +1263,9 @@ function drawFront(c, r, mm, F, sp){
   }
 }
 
-function drawBack(c, r, mm, F){
-  const pad = 4*mm;
-  c.fillStyle = hexA(F.onField,.9);
-  c.textAlign = "left"; c.textBaseline = "top";
-  fitText(c, BRAND.backTitle, r.w*0.5, r.h*0.030, "800", 0.1);
-  c.fillText(BRAND.backTitle, r.x+pad, r.y+pad);
-  c.fillStyle = hexA(F.onField,.45);
-  const lh = r.h*0.014;
-  for(let i=0;i<14;i++){
-    const w = r.w*0.86 * (i%5===4 ? 0.55 : 1) - pad;
-    c.fillRect(r.x+pad, r.y+pad+r.h*0.075+i*lh*2.1, w, lh*0.5);
-  }
-  c.textAlign="center"; c.textBaseline="middle";
-}
-
-function drawNutrition(c, r, mm){
-  const pad = 3*mm;
-  const x = r.x+pad, w = r.w-pad*2;
-  let y = r.y+pad;
-  c.fillStyle = "#ffffff"; c.fillRect(x, y, w, r.h*0.52);
-  c.strokeStyle = NAVY; c.lineWidth = Math.max(1, 0.9*mm);
-  c.strokeRect(x, y, w, r.h*0.52);
-  c.fillStyle = NAVY; c.textAlign="left"; c.textBaseline="top";
-  fitText(c, "Nutrition", w*0.9, r.h*0.020, "800", -0.01);
-  c.fillText("Nutrition", x+1.5*mm, y+1.5*mm);
-  fitText(c, "Facts", w*0.9, r.h*0.020, "800", -0.01);
-  c.fillText("Facts", x+1.5*mm, y+1.5*mm+r.h*0.024);
-  /* the ruled rows, the way the panel is actually constructed */
-  let yy = y + r.h*0.062;
-  const rows = [3,1,1,2,1,1,1,1,1,1,1,3,1,1,1,1];
-  for(const wt of rows){
-    c.fillRect(x+1.2*mm, yy, w-2.4*mm, Math.max(1, wt*0.32*mm));
-    yy += r.h*0.026;
-    if(yy > y+r.h*0.50) break;
-  }
-  c.fillStyle = NAVY;
-  fitText(c, "INGREDIENTS", w*0.9, r.h*0.014, "700", 0.09);
-  c.fillText("INGREDIENTS", x+1.5*mm, r.y+r.h*0.58);
-  c.fillStyle = hexA(NAVY,.5);
-  for(let i=0;i<10;i++)
-    c.fillRect(x+1.5*mm, r.y+r.h*0.615+i*r.h*0.017, (w-3*mm)*(i===9?0.6:1), r.h*0.006);
-  c.textAlign="center"; c.textBaseline="middle";
-}
-
-function drawStory(c, r, mm, F){
-  const pad = 3*mm;
-  c.save();
-  c.translate(r.x+r.w/2, r.y+r.h/2);
-  c.fillStyle = NAVY; c.textAlign="center"; c.textBaseline="middle";
-  fitText(c, BRAND.tagline, r.h*0.8, r.w*0.16, "700", 0.14);
-  c.rotate(-Math.PI/2);
-  c.fillText(BRAND.tagline, 0, 0);
-  c.restore();
-}
+function drawBack(c,r,mm,F){contentLayout(c,'BACK',r,mm);}
+function drawNutrition(c,r,mm){contentLayout(c,'RIGHT',r,mm);}
+function drawStory(c,r,mm,F){contentLayout(c,'LEFT',r,mm);}
 
 function drawFlap(c, r, mm, F, which){
   c.textAlign="center"; c.textBaseline="middle";
@@ -2010,6 +1968,8 @@ function jobJSON(S){
       claim:state.copy.claim || state.spec.claim,
       weight:state.copy.weight || `${SIZES[g.name].g} (${SIZES[g.name].oz})`,
     },
+    packaging_content:contentEffective(),
+    content_checks:contentReport(),
     brief:state.rec.brief,
     reasoning:state.rec.why.map(w=>`${w.tag} — ${w.reason}`),
     art_direction:state.spec.notes,
@@ -3653,7 +3613,7 @@ function sessionSnapshot(){
   const toURL = img => img ? (img.src && img.src.startsWith("data:") ? img.src : imgToDataURL(img)) : null;
   return {
     format:"daybreak-session/1", generator_version:APP_VERSION, saved:new Date().toISOString(),
-    brand:brandSnapshot(),workspace:{...state.workspace},layers:clone(state.layers),
+    content:clone(state.content),brand:brandSnapshot(),workspace:{...state.workspace},layers:clone(state.layers),
     brief:{...state.brief}, overrides:{size:$("b-size-override").value, flavour:$("b-flavour-override").value},
     copy:{...state.copy}, spec:state.spec ? {...state.spec} : null, guides:state.guides,
     zones:{...state.zones}, assetScale:{...state.assetScale}, characterOnBack:state.characterOnBack,
@@ -3702,6 +3662,7 @@ async function sessionApply(snap){
     if(!PANELS.includes(state.workspace.panel))state.workspace.panel='FRONT';
     state.workspace.grid=Math.max(.1,Math.min(20,Number(state.workspace.grid) || 1));state.workspace.snap=state.workspace.snap!==false;
     state.layers=clone(snap.layers || {});
+    state.content=contentValidate(snap.content);
     if(snap.brand) await applyBrand(snap.brand, {quiet:true});
     for(const k in briefIds) if(snap.brief && snap.brief[k]) $(briefIds[k]).value = snap.brief[k];
     $("b-size-override").value = (snap.overrides||{}).size || "";
@@ -3792,7 +3753,7 @@ function projectThumbnail(){
 function projectValidate(snap){
   if(!snap || snap.format!=='daybreak-session/1') throw new Error('Choose a Daybreak session file.');
   const s=clone(snap);
-  for(const k of ['brand','brief','copy','spec','zones','assets','assetScale','view','proof','light','ads','overrides','workspace','layers']){
+  for(const k of ['brand','brief','copy','spec','zones','assets','assetScale','view','proof','light','ads','overrides','workspace','layers','content']){
     if(s[k]!=null && (typeof s[k]!=='object' || Array.isArray(s[k]))) throw new Error(`Invalid session ${k}.`);
   }
   if(s.brand){
@@ -3800,6 +3761,7 @@ function projectValidate(snap){
     if(typeof s.brand.name!=='string') throw new Error('Invalid brand name.');
   }
   if(s.images && !Array.isArray(s.images)) throw new Error('Invalid session images.');
+  if(s.content)s.content=contentValidate(s.content);
   return s;
 }
 async function projectApply(snap){
@@ -4047,7 +4009,7 @@ function wsRefresh(){
   for(const im of [...state.images].reverse().filter(i=>i.panel===wsPanel()))row(im.id,im.name,im.hidden,im.locked);
   if(wsPanel()==='FRONT')for(const key of ['character','bowl'])row(key,{logo:'Brand logo',character:'Character',bowl:'Product image'}[key],state.layers[key]?.hidden,state.layers[key]?.locked);
   if(!$('ws-layers').children.length)$('ws-layers').textContent='No image layers on this panel yet.';
-  historyButtons();
+  contentEditor();historyButtons();
 }
 function wsPaint(){
   if(!WS.ready || !state.g || flavourWork || renderingWork)return;
@@ -4055,6 +4017,7 @@ function wsPaint(){
   const r=panelRect(state.g,wsPanel(),1024),cv=$('ws-canvas');
   cv.width=Math.round(r.w*2);cv.height=Math.round(r.h*2);
   const c=cv.getContext('2d');c.drawImage(net,r.x,r.y,r.w,r.h,0,0,cv.width,cv.height);
+  if(contentReport().overflow.some(x=>x.panel===wsPanel())){c.strokeStyle='#ff8266';c.lineWidth=6;c.strokeRect(3,3,cv.width-6,cv.height-6);}
   const [pw,ph]=state.g.panelMM[wsPanel()],sx=cv.width/pw,sy=cv.height/ph;
   const layer=wsSelected();
   if(layer){const b=wsRect(layer);c.save();c.translate((b.x+b.w/2)*sx,(b.y+b.h/2)*sy);c.rotate((b.rot || 0)*Math.PI/180);
@@ -4149,6 +4112,7 @@ function initWorkspace(){
   $('ws-drawing').append($('adCv').closest('.ad-pane'));
   $('ws-brand-tools').append($('v-brand').querySelector('aside'));
   $('ws-brand-table').append($('br-flavours'),$('br-add'));
+  CONTENT_UI.ready=true;
   WS.ready=true;setTab('workspace');wsRefresh();
   document.querySelectorAll('[data-ws-panel]').forEach(b=>b.onclick=()=>wsSelectPanel(b.dataset.wsPanel,true));
   $('ws-brief').onclick=()=>wsMode('brief');$('ws-brand').onclick=()=>wsMode('brand');$('ws-back').onclick=()=>wsMode('layout');
@@ -4192,6 +4156,130 @@ renderRangeStrip=trackRendering(renderRangeStrip);
 rebuildProof=trackRendering(rebuildProof);
 buildRange=trackRendering(buildRange);
 buildSingle=trackRendering(buildSingle);
+
+/* Packaging copy is project data. A missing override inherits; an empty string
+   deliberately clears a field. Range rendering resolves against its own flavour. */
+const CONTENT_UI={ready:false,scope:'shared',key:'',cacheKey:'',report:null};
+const CONTENT_FIELDS=[
+ ['backTitle','Back heading','BACK'],['backBody','Back-panel copy','BACK','multiline'],
+ ['sideTitle','Side heading','LEFT'],['sideBody','Side story or recipe','LEFT','multiline'],
+ ['servings','Servings per container','RIGHT'],['servingSize','Serving size','RIGHT'],['calories','Calories','RIGHT','number'],
+ ...CONTENT_SPEC.nutrients.flatMap(([key,label,unit])=>[[key,label+' · '+unit,'RIGHT','number'],[key+'DV',label+' · % Daily Value','RIGHT','number']]),
+ ['nutritionNote','Nutrition footnote','RIGHT','multiline'],['ingredients','Ingredients','RIGHT','multiline'],['allergens','Allergen statement','RIGHT','multiline']
+];
+function contentValidate(value){
+ if(value==null)return {shared:{},flavours:{}};
+ const object=x=>x && typeof x==='object' && !Array.isArray(x);
+ if(!object(value)||!object(value.shared)||!object(value.flavours))throw new Error('Invalid packaging content.');
+ function fields(source){
+  if(!object(source))throw new Error('Invalid packaging fields.');const out={};
+  for(const [k,, ,type] of CONTENT_FIELDS){if(!Object.hasOwn(source,k))continue;const v=source[k];
+   if(typeof v!=='string'||v.length>20000)throw new Error('Packaging fields must be text of at most 20,000 characters.');
+   if(type==='number' && v!=='' && (!/^\d+(\.\d+)?$/.test(v)||!Number.isFinite(+v)))throw new Error('Nutrition values must be non-negative numbers.');out[k]=v;
+  }return out;
+ }
+ const flavours=Object.create(null);
+ for(const [k,v] of Object.entries(value.flavours)){if(k.length>100)throw new Error('Invalid content flavour.');flavours[k]=fields(v);}
+ return {shared:fields(value.shared),flavours};
+}
+function contentEffective(key=state.rec.flavKey){
+ return {...Object.fromEntries(CONTENT_FIELDS.map(([k])=>[k,''])),backTitle:BRAND.backTitle,sideTitle:BRAND.tagline,...state.content.shared,...(state.content.flavours[key]||{})};
+}
+function contentLayout(c,panel,r,mm){
+ const d=contentEffective(),warnings=[],pad=CONTENT_SPEC.safe_mm*mm,pt=mm*25.4/72;
+ const x=r.x+pad,w=r.w-pad*2,top=r.y+pad;
+ const reserved=panel==='BACK' && state.characterOnBack && state.assets.character && !state.layers.character?.hidden;
+ const bottom=r.y+r.h-pad-(reserved?Math.min(r.w*.6,r.h*.27)+pad:0);
+ let y=top;const gap=CONTENT_SPEC.gap_mm*mm;
+ c.save();c.beginPath();c.rect(x,top,Math.max(0,w),Math.max(0,bottom-top));c.clip();
+ c.textAlign='left';c.textBaseline='top';c.letterSpacing='0px';c.wordSpacing='0px';c.fillStyle=panel==='BACK'?state.rec.flavour.onField:NAVY;
+ function block(text,label,size=CONTENT_SPEC.body_pt,bold=false){
+  if(!text)return;const h=size*pt*CONTENT_SPEC.line_height;
+  c.font=`${bold?700:400} ${size*pt}px Arial, sans-serif`;
+  let lines=[];
+  for(const paragraph of String(text).split('\n')){
+   if(!paragraph){lines.push('');continue;}let line='';
+   for(const word of paragraph.trim().split(/\s+/)){
+    if(c.measureText(line+(line?' ':'')+word).width<=w){line+=(line?' ':'')+word;continue;}
+    if(line){lines.push(line);line='';}
+    for(const ch of word){if(line && c.measureText(line+ch).width>w){lines.push(line);line='';}line+=ch;}
+   }if(line)lines.push(line);
+  }
+  const used=lines.length*h;
+  if(w<=0 || y+used>bottom+.01*mm || lines.some(l=>c.measureText(l).width>w+.01*mm))warnings.push({panel,field:label,extra_mm:Math.max(0,(y+used-bottom)/mm)});
+  for(const line of lines){if(y+h<=bottom+.01*mm)c.fillText(line,x,y);y+=h;}y+=gap;
+ }
+ function rule(){c.fillRect(x,y-gap*.6,w,Math.max(.2*mm,pt*.5));}
+ if(panel==='BACK'){block(d.backTitle,'Back heading',CONTENT_SPEC.title_pt,true);block(d.backBody,'Back-panel copy');}
+ if(panel==='LEFT'){block(d.sideTitle,'Side heading',CONTENT_SPEC.title_pt,true);block(d.sideBody,'Side story or recipe');}
+ if(panel==='RIGHT'){
+  c.fillStyle='#fff';c.fillRect(x,top,w,bottom-top);c.fillStyle='#111';
+  block('Nutrition Facts','Nutrition heading',CONTENT_SPEC.nutrition_title_pt,true);rule();
+  const min=CONTENT_SPEC.nutrition_minimums;
+  block(d.servings?d.servings+' servings per container':'','Servings',min.servings_per_container);
+  block(d.servingSize?'Serving size '+d.servingSize:'','Serving size',min.serving_size,true);if(d.servingSize)rule();
+  if(d.calories!==''){block('Amount per serving','Amount per serving',min.amount_per_serving);block('Calories','Calories label',min.calories_word,true);block(d.calories,'Calories amount',min.calories_amount,true);rule();}
+  if(CONTENT_SPEC.nutrients.some(([k])=>d[k+'DV']!==''))block('% Daily Value','Daily Value heading',min.percent_dv_heading,true);
+  for(const [k,label,unit] of CONTENT_SPEC.nutrients){if(d[k]==='' && d[k+'DV']==='')continue;
+   block(label+(d[k]!==''?' '+d[k]+unit:'')+(d[k+'DV']!==''?'  ·  '+d[k+'DV']+'%':''),label,CONTENT_SPEC.nutrition_body_pt,k==='fat'||k==='carbohydrate'||k==='protein');rule();
+  }
+  block(d.nutritionNote,'Nutrition footnote',min.footnote);
+  if(d.ingredients){block('Ingredients','Ingredients heading',CONTENT_SPEC.body_pt,true);block(d.ingredients,'Ingredients',CONTENT_SPEC.nutrition_body_pt);}
+  if(d.allergens)block(d.allergens,'Allergen statement',CONTENT_SPEC.nutrition_body_pt,true);
+ }
+ c.restore();return warnings;
+}
+function contentReport(){
+ const d=contentEffective(),key=JSON.stringify([d,state.g.name,!!state.assets.character,state.characterOnBack,state.layers.character?.hidden,!!state.assets.dieline[state.g.name]]);
+ if(CONTENT_UI.cacheKey===key)return CONTENT_UI.report;
+ const c=document.createElement('canvas').getContext('2d'),overflow=[];
+ for(const panel of ['BACK','LEFT','RIGHT']){const [w,h]=state.g.panelMM[panel];overflow.push(...contentLayout(c,panel,{x:0,y:0,w,h},1));}
+ const missing=['backBody','ingredients','servings','servingSize','calories',...CONTENT_SPEC.nutrients.map(([k])=>k)].filter(k=>d[k]==='');
+ CONTENT_UI.cacheKey=key;return CONTENT_UI.report={overflow,missing,external_art:!!state.assets.dieline[state.g.name]};
+}
+function contentEditor(){
+ if(!CONTENT_UI.ready || !state.rec)return;
+ const root=$('ws-content-tools'),panel=wsPanel(),flav=state.rec.flavKey,scope=CONTENT_UI.scope;
+ root.hidden=!['BACK','LEFT','RIGHT'].includes(panel);
+ const key=JSON.stringify([panel,flav,scope,Object.keys(FLAVOURS).map(k=>[k,FLAVOURS[k].name])]);
+ if(CONTENT_UI.key!==key){
+  CONTENT_UI.key=key;root.replaceChildren();
+  const heading=document.createElement('h3');heading.textContent='Packaging content';root.append(heading);
+  const label=document.createElement('label');label.textContent='Preview flavour';label.htmlFor='content-flavour';const select=document.createElement('select');select.id='content-flavour';
+  for(const k of Object.keys(FLAVOURS)){const o=document.createElement('option');o.value=k;o.textContent=FLAVOURS[k].name;select.append(o);}select.value=flav;
+  select.onchange=()=>{const chosen=select.value;projectUI(()=>projectRun(()=>{
+   const layout={...state.spec};$('b-flavour-override').value=chosen;runBrief();
+   state.spec={...layout,claim:claimFor(state.brief,chosen)};syncSliders();redraw();
+  }));};root.append(label,select);
+  const scopeLabel=document.createElement('label');scopeLabel.textContent='Edit content for';scopeLabel.htmlFor='content-scope';const mode=document.createElement('select');mode.id='content-scope';
+  for(const [v,t] of [['shared','All flavours · shared'],['flavour','This flavour · overrides']]){const o=document.createElement('option');o.value=v;o.textContent=t;mode.append(o);}mode.value=scope;
+  mode.onchange=()=>{CONTENT_UI.scope=mode.value;contentEditor();};root.append(scopeLabel,mode);
+  const note=document.createElement('p');note.className='hint';note.textContent=scope==='shared'?'Shared content is used wherever a flavour has no override.':'Enable Override beside a field to change only this flavour. Clear it to use the shared value again.';root.append(note);
+  if(panel==='RIGHT'){const hint=document.createElement('p');hint.className='hint';hint.textContent='Enter verified product data. Blank values stay blank; percentages are entered, not calculated. This layout is a design proof.';root.append(hint);}
+  for(const [k,title,panelName,type] of CONTENT_FIELDS.filter(f=>f[2]===panel)){
+   const row=document.createElement('div');row.className='row';const lab=document.createElement('label');lab.htmlFor='content-'+k;lab.textContent=title;row.append(lab);
+   if(scope==='flavour'){const toggleLabel=document.createElement('label');toggleLabel.className='chk';const toggle=document.createElement('input');toggle.type='checkbox';toggle.id='override-'+k;toggle.dataset.contentOverride=k;toggleLabel.append(toggle,document.createTextNode('Override'));row.append(toggleLabel);
+    toggle.onchange=()=>{historyRecord();const values=state.content.flavours[flav] || (state.content.flavours[flav]={});if(toggle.checked)values[k]=contentEffective(flav)[k];else delete values[k];redraw();};}
+   const input=document.createElement(type==='multiline'?'textarea':'input');input.id='content-'+k;input.dataset.contentField=k;
+   if(type==='multiline'){input.rows=5;input.style.width='100%';}else input.type=type==='number'?'number':'text';
+   if(type==='number'){input.min='0';input.step='any';}input.maxLength=20000;
+   input.oninput=()=>{if(type==='number' && (!input.validity.valid || input.value!=='' && (!/^\d+(\.\d+)?$/.test(input.value)||!Number.isFinite(+input.value))))return;
+    const dest=scope==='shared'?state.content.shared:(state.content.flavours[flav] || (state.content.flavours[flav]={}));dest[k]=input.value;redraw();};row.append(input);root.append(row);
+  }
+ }
+ const data=contentEffective(flav);
+ for(const input of root.querySelectorAll('[data-content-field]')){const k=input.dataset.contentField,override=Object.hasOwn(state.content.flavours[flav]||{},k);
+  input.disabled=scope==='flavour'&&!override;if(SESSION.restoring || document.activeElement!==input)input.value=scope==='shared'?(state.content.shared[k]??(k==='backTitle'?BRAND.backTitle:k==='sideTitle'?BRAND.tagline:'')):data[k];
+  const toggle=$('override-'+k);if(toggle)toggle.checked=override;
+ }
+ const report=contentReport(),status=$('ws-content-status');status.replaceChildren();
+ if(report.overflow.length){const text=document.createElement('strong');text.textContent='Text exceeds the panel area. Shorten the content or choose a larger box.';status.append(text);
+  for(const warning of report.overflow){const item=document.createElement('div');item.textContent=warning.panel.toLowerCase()+' · '+warning.field;status.append(item);}
+ }else status.textContent='Packaging text fits the current box.';
+ if(report.missing.length){const details=document.createElement('details'),summary=document.createElement('summary'),p=document.createElement('p');summary.textContent=report.missing.length+' content fields still blank';p.textContent=report.missing.map(k=>CONTENT_FIELDS.find(f=>f[0]===k)?.[1]||k).join(', ')+'.';details.append(summary,p);status.append(details);}
+ if(report.external_art){const p=document.createElement('p');p.textContent='External dieline art may cover this content. Fit checks apply to Studio text only.';status.append(p);}
+ for(const b of document.querySelectorAll('[data-ws-panel]')){const p=b.dataset.wsPanel;b.textContent=p[0]+p.slice(1).toLowerCase()+(report.overflow.some(w=>w.panel===p)?' !':'');}
+}
 
 /* --- boot --- */
 $("ver").textContent = "v" + APP_VERSION;

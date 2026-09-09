@@ -63,6 +63,87 @@
     }
   },
 
+  "packaging_content": {
+    "body_pt": 10,
+    "title_pt": 18,
+    "nutrition_body_pt": 8,
+    "nutrition_title_pt": 24,
+    "line_height": 1.25,
+    "gap_mm": 2,
+    "nutrients": [
+      [
+        "fat",
+        "Total Fat",
+        "g"
+      ],
+      [
+        "saturatedFat",
+        "Saturated Fat",
+        "g"
+      ],
+      [
+        "transFat",
+        "Trans Fat",
+        "g"
+      ],
+      [
+        "cholesterol",
+        "Cholesterol",
+        "mg"
+      ],
+      [
+        "sodium",
+        "Sodium",
+        "mg"
+      ],
+      [
+        "carbohydrate",
+        "Total Carbohydrate",
+        "g"
+      ],
+      [
+        "fiber",
+        "Dietary Fiber",
+        "g"
+      ],
+      [
+        "sugars",
+        "Total Sugars",
+        "g"
+      ],
+      [
+        "addedSugars",
+        "Added Sugars",
+        "g"
+      ],
+      [
+        "protein",
+        "Protein",
+        "g"
+      ],
+      [
+        "vitaminD",
+        "Vitamin D",
+        "mcg"
+      ],
+      [
+        "calcium",
+        "Calcium",
+        "mg"
+      ],
+      [
+        "iron",
+        "Iron",
+        "mg"
+      ],
+      [
+        "potassium",
+        "Potassium",
+        "mg"
+      ]
+    ]
+  },
+
   "nutrition_panel_minimums_pt": {
     "$comment": "US FDA. Note the FDA does NOT mandate Helvetica — that is convention. What it forbids is decorative, script or stylised faces. See 21 CFR 101.9.",
     "calories_amount": 22,

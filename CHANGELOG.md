@@ -4,6 +4,13 @@ Versions follow semver. `VERSION` at the repo root is the single source of
 truth; the app, the Python tools and every exported `job.json` carry it, and
 `tools/verify_geometry.py` fails if the app's inlined copy drifts from it.
 
+## 1.17.0 — 2026-09-09
+
+- Replace back and side placeholder content with editable stories, ingredients, allergens and nutrition data.
+- Add shared content and field-level flavour overrides, including deliberate blank values, saved with project history and recovery.
+- Typeset content at physical sizes with wrapping, overflow indicators and missing-data checks; carry resolved content and checks into every exported job.
+- Reserve space for the back character and add packaging-content browser regression coverage.
+
 ## 1.16.0 — 2026-09-09
 
 - Add a unified workspace with persistent live box, six-panel selection, contextual controls and integrated brief, brand and asset editing.

@@ -48,3 +48,12 @@ contextual numeric controls, aspect ratio, locking, layer order and visibility,
 snapped pointer dragging, copy/brief/asset undo and redo, redo invalidation,
 project history isolation and saved layer IDs after reopening. The screenshot
 is written to a temporary folder for visual review.
+
+## Stage 4 packaging content
+
+Run `node tests/content.cjs` in the same Playwright environment. It covers real
+editor interactions, shared inheritance, flavour overrides and explicit blanks,
+non-negative nutrition input, copy undo/redo, actual canvas text, overflow
+warnings, per-flavour job content, project isolation, reopening and legacy
+content defaults. It also checks the embedded nutrient schema against the spec.
+Nutrition figures in the test are synthetic fixtures, not product data.

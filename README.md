@@ -8,7 +8,7 @@
 | 1 | Security and baseline | Local bridge pairing, restricted Blender selection, upload validation, regression checks | Complete — v1.14.1 |
 | 2 | Projects and recovery | Named projects, gallery, duplication, checkpoints, autosave, recovery and legacy session migration | Complete — v1.15.0 |
 | 3 | Box-centered workspace | Brief/project starting screen, persistent live box, clickable panels, contextual editing, Edit asset tools, undo/redo and alignment | Complete — v1.16.0 |
-| 4 | Complete packaging content | Editable back copy, ingredients, nutrition, per-flavour overrides and overflow indicators | Planned |
+| 4 | Complete packaging content | Editable back copy, ingredients, nutrition, per-flavour overrides and overflow indicators | Complete — v1.17.0 |
 | 5 | Reliable export and rendering | Proof labeling, export checks, Blender queue, progress, cancellation, retry and version-linked results | Planned |
 | 6 | Production output and polish | Printer-specific exports, accessibility, keyboard controls and performance | Planned |
 
@@ -60,8 +60,40 @@ the gallery; **Brief** and **Brand** open controls beside the preview.
   History belongs to the current project in this tab and resets on reopening or
   switching projects; use named checkpoints for lasting versions.
 
-**Range proof**, **Export** and **Ads** remain separate output views. Structured
-back-panel and nutrition editing remain Stage 4 work.
+**Range proof**, **Export** and **Ads** remain separate output views. Packaging copy is edited in the workspace as described below.
+
+## Packaging content
+
+Select **Back**, **Left** or **Right** in the workspace to edit packaging content
+beside the live box. Back supports a heading and story; Left supports a heading
+and story or recipe. Right supports serving information, calories, nutrient
+amounts and percentages, a footnote, ingredients and an allergen statement.
+
+**All flavours · shared** edits the project defaults. Select a **Preview flavour**
+and **This flavour · overrides**, then enable **Override** beside a field to
+customize it. An empty override deliberately removes that text; turning Override
+off restores inheritance. Existing front copy controls retain their shared scope.
+
+Nutrition starts blank. Enter verified values in the units shown; percentages
+are entered explicitly and are never inferred or calculated. A blank amount is
+not treated as zero. The nutrition layout uses plain type at fixed physical
+sizes, sourced from `spec/boxes.json`. This is a design proof, not certification
+of a market-specific nutrition label.
+
+Text wraps within the panel's safe area. A panel **!**, an outline in the editor,
+and the content status identify overflow. Text does not shrink automatically;
+shorten the copy or select a larger box. Overflowing lines are clipped in the
+artwork, so resolve warnings before using the export. Mini packs may require a
+more compact, separately designed nutrition layout. The back character reserves
+space beneath the text. External dieline art can cover Studio content; its own
+text is outside these checks.
+
+Content and overrides participate in undo/redo, projects, checkpoints, session
+files and recovery. PNG, SVG/PDF artwork and every flavour in a range use the
+resolved content. Each job also records `packaging_content` and `content_checks`
+with missing fields and overflow for that exact flavour and box size. Checks
+cover the new Back, Left and Right text blocks, not imported artwork or front
+copy. Warnings are editor-only and are not printed on the artwork.
 
 ## Run it
 
