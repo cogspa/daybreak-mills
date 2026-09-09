@@ -1,0 +1,31 @@
+# Stage 1 regression baseline
+
+Run from the project root:
+
+```
+python3 -m unittest discover -s tests -v
+python3 tools/verify_geometry.py
+node tests/browser_baseline.cjs
+```
+
+The browser test needs Playwright in the test environment. Set `NODE_PATH` if
+using a separately installed package and `CHROME_PATH` to use a local Chrome
+executable. These are test dependencies only; the Studio remains one offline HTML
+file. Set `BASELINE_OUTPUT` to a temporary folder to retain its exported ZIP and
+four size jobs for Blender verification.
+
+Baseline scenarios:
+- Existing `jobs/daybreak_mini_cocoa_job.json` and its PNG: compact, dark artwork.
+- Existing `jobs/daybreak_regular_bran_job.json` and its PNG: regular, light artwork.
+- Browser-generated session: custom claim, moved logo zone and embedded logo;
+  import/export and IndexedDB save/load preserve them.
+- Browser-generated Cocoa jobs: all four sizes match the canonical dimensions.
+- SVG dimensions and PDF MediaBox match the current net in physical units.
+- Offline boot has no uncaught errors and passes the UV self-test.
+- Security tests run an isolated HTTP server with mocked Blender; no real builds,
+  configuration changes or external network calls occur.
+
+For the real Blender gate, extract `browser-single.zip` into a temporary folder
+and run your detected Blender with `--background --python
+blender/daybreak_pipeline.py -- --jobs <folder> --save <temporary-output.blend>`.
+Confirm UV drift below 1e-7. A successful stub is not a substitute for this gate.

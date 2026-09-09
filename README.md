@@ -323,3 +323,31 @@ is right.
 
 Daybreak Mills is a fictional brand invented for this system. The box dimensions
 are public product measurements. The HDRI is CC0.
+
+
+## Secure local bridge (1.14.1)
+
+Restart an already-running bridge after this update. In Export, choose **Choose
+pairing file**, then select `jobs/bridge-pairing.json` in this checkout. The bridge
+creates that file at startup with owner-only permissions. Pairing is remembered
+for the current browser tab; a new tab may need pairing again. Offline editing
+and file exports work without pairing. The pairing key is excluded from Git and
+release ZIPs; do not share it. To revoke it, stop the bridge, remove the pairing
+file, restart and pair again.
+
+The bridge accepts only loopback Host headers and local-file or non-browser
+origins. A local-file origin alone grants no access: deployment, Blender
+selection, history, render retrieval and detailed status require the pairing
+key. Unpaired discovery returns only the bridge identity, version and pairing
+requirement. Blender selections are limited to detected installs or the path
+explicitly configured when launching the bridge.
+
+Uploads are limited to 256 MiB, with 512 MiB expanded ZIP data, 129 entries,
+64 jobs and 1 MiB per JSON file. Invalid paths, links, duplicate/unlisted files,
+missing textures and incomplete PNGs are rejected before extraction. Folder
+imports use the same archive checks. Each extraction uses a fresh directory;
+bridge uploads use unique names outside the folder watcher's matching pattern.
+These checks validate the package container, not print readiness or nutrition
+content. Local users and deliberately imported files remain trusted inputs.
+
+See `tests/README.md` for the repeatable Stage 1 checks and sample scenarios.

@@ -29,6 +29,11 @@ Endpoints (all on http://127.0.0.1:8765):
 """
 
 import argparse
+import io
+import secrets
+import socket
+import tempfile
+import zipfile
 import json
 import os
 import sys
@@ -38,10 +43,11 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse, parse_qs
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from bridge_security import MAX_UPLOAD, pairing_key, validate_range
 import watch_jobs as W                                   # noqa: E402
 
 STATE = {"blender": None, "cfg": None, "led": None, "history": None,
-         "lock": threading.Lock(), "started": time.time(), "folders": []}
+         "token": None, "lock": threading.Lock(), "started": time.time(), "folders": []}
 
 
 # One Blender at a time, whichever path a build arrives by. The watcher thread
@@ -63,11 +69,28 @@ class Handler(BaseHTTPRequestHandler):
         sys.stdout.write(f"  {W.DIM}{self.address_string()} {fmt % args}{W.RESET}\n")
 
     def _cors(self):
-        # the studio is opened from file://, whose Origin is the literal "null"
-        self.send_header("Access-Control-Allow-Origin", "*")
+        if self.headers.get("Origin") == "null":
+            self.send_header("Access-Control-Allow-Origin", "null")
+        self.send_header("Vary", "Origin")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-Daybreak-Name")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-Daybreak-Name, X-Daybreak-Token")
         self.send_header("Cache-Control", "no-store")
+
+    def _allowed(self, authenticate=True):
+        # Host validation also prevents DNS rebinding to this loopback service.
+        host = self.headers.get("Host", "")
+        expected = f"127.0.0.1:{self.server.server_port}"
+        if host != expected or self.headers.get("Origin") not in (None, "null"):
+            self._json(403, {"error": "This bridge accepts local Studio requests only"})
+            return False
+        if authenticate and not self._paired():
+            self._json(401, {"error": "Pair this Studio with jobs/bridge-pairing.json"})
+            return False
+        return True
+
+    def _paired(self):
+        token = self.headers.get("X-Daybreak-Token", "")
+        return bool(STATE["token"] and secrets.compare_digest(token.encode(), STATE["token"].encode()))
 
     def _json(self, code, obj):
         body = json.dumps(obj).encode()
@@ -79,15 +102,22 @@ class Handler(BaseHTTPRequestHandler):
         self.wfile.write(body)
 
     def do_OPTIONS(self):
+        if not self._allowed(False):
+            return
         self.send_response(204)
         self._cors()
         self.end_headers()
 
     # ---- GET ----------------------------------------------------------------
     def do_GET(self):
+        if not self._allowed(False):
+            return
         u = urlparse(self.path)
         if u.path == "/status":
-            return self._json(200, status_payload())
+            return self._json(200, status_payload() if self._paired() else {
+                "bridge": "daybreak", "version": W.repo_version(), "pairing_required": True})
+        if not self._allowed():
+            return
         if u.path == "/history":
             return self._json(200, {"history": STATE["history"][:40]})
         if u.path.startswith("/renders/"):
@@ -109,16 +139,34 @@ class Handler(BaseHTTPRequestHandler):
     # ---- POST ---------------------------------------------------------------
     def do_POST(self):
         u = urlparse(self.path)
-        length = int(self.headers.get("Content-Length", "0"))
-        body = self.rfile.read(length) if length else b""
+        self.close_connection = True
+        if not self._allowed():
+            return
+        if self.headers.get("Transfer-Encoding"):
+            return self._json(400, {"error": "Transfer-Encoding is not supported"})
+        try:
+            length = int(self.headers.get("Content-Length", ""))
+        except ValueError:
+            return self._json(400, {"error": "Invalid Content-Length"})
+        limit = 16384 if u.path == "/select" else MAX_UPLOAD
+        if length < 0 or length > limit:
+            return self._json(413, {"error": "Upload exceeds request limit"})
+        self.connection.settimeout(30)
+        try:
+            body = self.rfile.read(length)
+        except (socket.timeout, OSError):
+            return self._json(408, {"error": "Upload timed out"})
+        if len(body) != length:
+            return self._json(400, {"error": "Incomplete upload"})
 
         if u.path == "/select":
             try:
                 path = json.loads(body or b"{}").get("path", "")
             except Exception:
                 return self._json(400, {"error": "bad json"})
-            if not os.path.isfile(path):
-                return self._json(400, {"error": "not a file", "path": path})
+            allowed = {b["path"] for b in W.list_blenders()} | {STATE["blender"]}
+            if not isinstance(path, str) or path not in allowed or not os.path.isfile(path):
+                return self._json(400, {"error": "Choose a detected Blender installation"})
             W.write_config(blender=path)
             STATE["blender"] = path
             print(f"  blender  : {path}  {W.DIM}(v{'.'.join(map(str, W.blender_version(path)))}) — chosen{W.RESET}")
@@ -127,14 +175,27 @@ class Handler(BaseHTTPRequestHandler):
         if u.path == "/deploy":
             if not body or body[:2] != b"PK":
                 return self._json(400, {"error": "body must be a zip from the studio"})
+            try:
+                with zipfile.ZipFile(io.BytesIO(body)) as zf:
+                    validate_range(zf)
+            except (ValueError, zipfile.BadZipFile, RuntimeError, NotImplementedError) as e:
+                return self._json(400, {"error": str(e)})
             name = self.headers.get("X-Daybreak-Name", f"daybreak_deploy_{int(time.time())}")
             name = "".join(c for c in name if c.isalnum() or c in "_-")[:80] or "daybreak_deploy"
             if not name.endswith(".zip"):
                 name += ".zip"
             os.makedirs(W.JOBS, exist_ok=True)
+            # Unique names avoid collisions between tabs and the folder watcher.
+            name = "bridge_deploy_" + secrets.token_hex(12) + ".zip"
             zpath = os.path.join(W.JOBS, name)
-            with open(zpath, "wb") as f:
-                f.write(body)
+            fd, pending = tempfile.mkstemp(prefix=".upload-", dir=W.JOBS)
+            try:
+                with os.fdopen(fd, "wb") as f:
+                    f.write(body)
+                os.replace(pending, zpath)
+            finally:
+                if os.path.exists(pending):
+                    os.unlink(pending)
 
             q = parse_qs(u.query)
             cfg = dict(STATE["cfg"], open=q.get("open", ["0"])[0] in ("1", "true"))
@@ -157,7 +218,7 @@ def status_payload():
     if chosen and all(b["path"] != chosen for b in installs):     # e.g. --blender to a custom path
         installs.insert(0, {"path": chosen, "version": ".".join(map(str, W.blender_version(chosen)))})
     return {
-        "bridge": "daybreak", "version": W.repo_version(),
+        "bridge": "daybreak", "version": W.repo_version(), "authenticated": True,
         "uptime_s": int(time.time() - STATE["started"]),
         "blender": chosen,
         "blender_version": ".".join(map(str, W.blender_version(chosen))) if chosen else None,
@@ -191,6 +252,7 @@ def main():
             hdri = p
             break
 
+    STATE["token"] = pairing_key(W.JOBS)
     STATE["blender"] = blender
     STATE["cfg"] = {"mode": "hero", "hdri": hdri, "dry_run": False, "open": False}
     STATE["led"] = W.load_ledger()

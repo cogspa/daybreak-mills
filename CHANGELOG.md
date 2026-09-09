@@ -4,6 +4,11 @@ Versions follow semver. `VERSION` at the repo root is the single source of
 truth; the app, the Python tools and every exported `job.json` carry it, and
 `tools/verify_geometry.py` fails if the app's inlined copy drifts from it.
 
+## 1.14.1 — 2026-09-09
+
+- Secure local bridge pairing, restricted Blender selection and bounded archive validation for deployments and folder imports.
+- Add bridge security tests and offline browser/session/export regression baseline.
+
 ## 1.14.0 — 2026-09-05
 
 - **Your own brand.** A new first tab, *Brand*. Daybreak Mills becomes the

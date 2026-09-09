@@ -495,13 +495,16 @@ def process_range(cand, blender, cfg, led, history):
 
     try:
         with zipfile.ZipFile(zpath) as zf:
+            from bridge_security import validate_range
+            validate_range(zf)
             names = zf.namelist()
             if "range.json" not in names:
                 print(f"  [{RED}skip{RESET}] no range.json inside — not a Daybreak range zip")
                 return False
-            os.makedirs(dest, exist_ok=True)
+            import tempfile
+            dest = tempfile.mkdtemp(prefix=stem + "_", dir=JOBS)
             zf.extractall(dest)
-    except zipfile.BadZipFile as e:
+    except (zipfile.BadZipFile, ValueError, RuntimeError, NotImplementedError) as e:
         print(f"  [{RED}skip{RESET}] bad zip: {e}")
         return False
 

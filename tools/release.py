@@ -36,7 +36,7 @@ DIST = os.path.join(ROOT, "dist")
 
 EXCLUDE_DIRS = {".git", "dist", "node_modules", "__pycache__", "renders", "_preview", ".vscode", ".idea"}
 EXCLUDE_FILES = {".DS_Store", ".processed.json", ".history.json", ".bridge.pid", ".bridge.port", "status.html",
-                 "bridge.log", "Thumbs.db", "daybreak.config.json"}
+                 "bridge.log", "bridge-pairing.json", "Thumbs.db", "daybreak.config.json"}
 EXCLUDE_EXT = {".hdr", ".exr", ".blend1", ".blend2", ".pyc"}
 
 
@@ -89,7 +89,7 @@ def runtime_job(dirpath, name):
     # every studio deploy/range carries a _YYYYMMDD-HHMM stamp; the samples don't
     return (os.path.basename(dirpath) == "jobs"
             and (re.search(r"_\d{8}-\d{4}", name) is not None
-                 or name.startswith(("daybreak_range_", "daybreak_matrix_", "daybreak_deploy_"))))
+                 or name.startswith(("daybreak_range_", "daybreak_matrix_", "daybreak_deploy_", "bridge_deploy_"))))
 
 
 def package(version):

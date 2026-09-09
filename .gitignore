@@ -35,3 +35,6 @@ jobs/bridge.log
 jobs/status.html
 jobs/.bridge.port
 repomix-output.*
+
+jobs/bridge-pairing.json
+jobs/bridge_deploy_*

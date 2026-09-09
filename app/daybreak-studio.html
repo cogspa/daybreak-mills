@@ -554,6 +554,8 @@
         <div class="grp">
           <span class="lab">Deploy to Blender</span>
           <div id="bridge-pill" class="hint" style="margin:0 0 8px">checking for the bridge…</div>
+          <button class="btn alt" id="bridge-pair" hidden>Choose pairing file</button>
+          <input type="file" id="bridge-pair-file" accept="application/json" hidden>
           <div class="row"><select id="bridge-blender" disabled><option>Blender —</option></select></div>
           <div class="row"><select id="deploy-what">
             <option value="one">This box only</option>
@@ -677,7 +679,7 @@
 
 <script>
 "use strict";
-const APP_VERSION = "1.14.0";   /* keep equal to /VERSION — verify_geometry.py checks */
+const APP_VERSION = "1.14.1";   /* keep equal to /VERSION — verify_geometry.py checks */
 
 /* ==========================================================================
    GEOMETRY — identical maths to build_box_mesh() in the Blender scripts.
@@ -1734,15 +1736,20 @@ async function buildSingle(){
    by an unrelated tool on one machine). Probe the range and accept only a reply
    that identifies itself — a foreign server on the way would otherwise pass. */
 let BRIDGE = "http://127.0.0.1:8765";
+let bridgeToken = "";
+try { bridgeToken = sessionStorage.getItem("daybreak-bridge-token") || ""; } catch {}
+const bridgeHeaders = () => ({"X-Daybreak-Token":bridgeToken});
 let bridge = null;                       // last /status payload, or null when unreachable
 
 async function probe(port){
   const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(), 900);
   try {
-    const r = await fetch(`http://127.0.0.1:${port}/status`, {signal:ctrl.signal});
+    const r = await fetch(`http://127.0.0.1:${port}/status`, {signal:ctrl.signal, headers:bridgeHeaders()});
     if(!r.ok) return null;
     const j = await r.json();
-    return j && j.bridge === "daybreak" ? {port, j} : null;
+    if(!j || j.bridge !== "daybreak") return null;
+    if(!j.pairing_required && j.authenticated !== true) j.restart_required = true;
+    return {port, j};
   } catch { return null; }
   finally { clearTimeout(t); }
 }
@@ -1757,7 +1764,21 @@ async function pingBridge(){
 
 function renderBridge(){
   const pill = $("bridge-pill"), sel = $("bridge-blender");
-  const on = !!bridge;
+  if(bridge && bridge.restart_required){
+    sel.disabled = true;
+    $("bridge-pair").hidden = true;
+    pill.textContent = "Restart the bridge to enable secure pairing with this Studio version.";
+    $("deploy-go").textContent = "Restart bridge to deploy";
+    return;
+  }
+  const on = !!bridge && !bridge.pairing_required;
+  $("bridge-pair").hidden = !bridge || on;
+  if(bridge && bridge.pairing_required){
+    sel.disabled = true;
+    pill.textContent = "Bridge found. Choose the pairing file in this project’s jobs folder to connect.";
+    $("deploy-go").textContent = "Pair to deploy";
+    return;
+  }
   sel.disabled = !on;
   /* the buttons stay live when the bridge is down: Deploy then opens
      daybreak://start, which the installed handler app answers by starting it */
@@ -1808,22 +1829,29 @@ async function deploy(what){
       return what==="one" ? $("e-job").click() : exportRange(what);
     }
   }
+  if(bridge.restart_required){ btn.disabled = false; renderBridge(); return; }
+  if(bridge.pairing_required){ btn.disabled = false; $("bridge-pair-file").click(); return; }
   btn.disabled = true; btn.textContent = what==="matrix" ? "Rendering 24 textures…" : "Rendering artwork…";
   try {
     const pkg = what==="one" ? await buildSingle() : await buildRange(what);
     btn.textContent = `Building ${pkg.count} box${pkg.count===1?"":"es"} in Blender…`;
     const open = $("deploy-open").checked ? 1 : 0;
     const r = await fetch(`${BRIDGE}/deploy?open=${open}`, {method:"POST",
-                headers:{"Content-Type":"application/zip", "X-Daybreak-Name":pkg.name}, body:pkg.blob});
+                headers:{...bridgeHeaders(), "Content-Type":"application/zip", "X-Daybreak-Name":pkg.name}, body:pkg.blob});
     const res = await r.json();
     if(!r.ok || !res.ok) throw new Error(res.error || `bridge returned ${r.status}`);
     const bv = (bridge.blenders.find(b=>b.path===res.blender)||{}).version || "";
+    let renderURL = "";
+    if(res.render){
+      const rr = await fetch(`${BRIDGE}/renders/${res.render.split("/").pop()}`, {headers:bridgeHeaders()});
+      if(rr.ok) renderURL = URL.createObjectURL(await rr.blob());
+    }
     out.innerHTML = `
       <div class="warn ok" style="margin-top:10px">
         Built <b>${res.boxes}</b> box${res.boxes===1?"":"es"} in <b>${res.seconds}s</b> with Blender ${bv}${res.opened?" — opening the scene now.":"."}<br>
         <code>${res.blend}</code>
       </div>
-      ${res.render ? `<img src="${BRIDGE}/renders/${res.render.split("/").pop()}?t=${Date.now()}" style="width:100%;border-radius:7px;margin-top:8px;border:1px solid var(--line);display:block" alt="">` : ""}`;
+      ${renderURL ? `<img src="${renderURL}" style="width:100%;border-radius:7px;margin-top:8px;border:1px solid var(--line);display:block" alt="">` : ""}`;
     pingBridge();
   } catch(err){
     out.innerHTML = `<div class="warn" style="margin-top:10px">Deploy failed: ${err.message}</div>`;
@@ -2482,8 +2510,21 @@ function renderOut(){
 }
 $("e-res").addEventListener("change", renderOut);
 $("e-range-go").addEventListener("click", ()=>exportRange($("e-range").value));
+$("bridge-pair").addEventListener("click", ()=>$("bridge-pair-file").click());
+$("bridge-pair-file").addEventListener("change", async e=>{
+  const file = e.target.files[0]; e.target.value = "";
+  if(!file) return;
+  try {
+    if(file.size > 4096) throw new Error("Invalid pairing file");
+    const data = JSON.parse(await file.text());
+    if(data.format !== "daybreak-pairing/1" || !/^[0-9a-f]{64}$/.test(data.token)) throw new Error("Invalid pairing file");
+    bridgeToken = data.token;
+    try { sessionStorage.setItem("daybreak-bridge-token", bridgeToken); } catch {}
+    await pingBridge();
+  } catch { $("bridge-pill").textContent = "Choose jobs/bridge-pairing.json from this project."; }
+});
 $("bridge-blender").addEventListener("change", async e=>{
-  const r = await fetch(BRIDGE + "/select", {method:"POST", headers:{"Content-Type":"application/json"},
+  const r = await fetch(BRIDGE + "/select", {method:"POST", headers:{...bridgeHeaders(), "Content-Type":"application/json"},
                                              body:JSON.stringify({path:e.target.value})});
   bridge = r.ok ? await r.json() : bridge;
   renderBridge();
