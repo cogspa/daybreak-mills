@@ -57,3 +57,17 @@ non-negative nutrition input, copy undo/redo, actual canvas text, overflow
 warnings, per-flavour job content, project isolation, reopening and legacy
 content defaults. It also checks the embedded nutrient schema against the spec.
 Nutrition figures in the test are synthetic fixtures, not product data.
+
+## Stage 5 exports and queue
+
+Run `node tests/output.cjs` in the same Playwright environment. It exercises the
+actual export controls and paired HTTP queue: checks, explicit proof export,
+checkpoint/hash references, SVG/PDF labels, stable textures, export cancellation,
+submission, cancellation, retry, result download and design restoration. The
+bridge and fake Blender use a disposable directory. The resulting Studio package
+is retained as `/private/tmp/daybreak-stage5-proof.zip` for real Blender testing.
+
+`python3 -m unittest discover -s tests -v` includes durable queue tests for
+serialization, duplicate submissions, process cancellation, fresh retries,
+restarts, timeouts, missing files and truncated output. Fake Blender writes to
+the real pipeline output paths. A separate real Blender render must also succeed.

@@ -9,7 +9,7 @@
 | 2 | Projects and recovery | Named projects, gallery, duplication, checkpoints, autosave, recovery and legacy session migration | Complete — v1.15.0 |
 | 3 | Box-centered workspace | Brief/project starting screen, persistent live box, clickable panels, contextual editing, Edit asset tools, undo/redo and alignment | Complete — v1.16.0 |
 | 4 | Complete packaging content | Editable back copy, ingredients, nutrition, per-flavour overrides and overflow indicators | Complete — v1.17.0 |
-| 5 | Reliable export and rendering | Proof labeling, export checks, Blender queue, progress, cancellation, retry and version-linked results | Planned |
+| 5 | Reliable export and rendering | Proof labeling, export checks, Blender queue, progress, cancellation, retry and version-linked results | Complete — v1.18.0 |
 | 6 | Production output and polish | Printer-specific exports, accessibility, keyboard controls and performance | Planned |
 
 Each stage ends with verified workflows, a reviewable release and focused commits
@@ -94,6 +94,55 @@ resolved content. Each job also records `packaging_content` and `content_checks`
 with missing fields and overflow for that exact flavour and box size. Checks
 cover the new Back, Left and Right text blocks, not imported artwork or front
 copy. Warnings are editor-only and are not printed on the artwork.
+
+## Reliable exports and Blender rendering
+
+The **Export** view checks every requested flavour and size before producing
+files. It lists text overflow, blank packaging fields, missing product artwork,
+external dieline artwork, preview differences and effective texture density.
+Review the list and enable **Export as a design proof** to continue. The existing
+illustrative barcode is not a production barcode. These are design proofs;
+printer-specific production output remains Stage 6.
+
+Each checked export saves an **Export** checkpoint in the current project and
+records its project ID, saved revision, checkpoint ID, app version and snapshot
+SHA-256. PNG/job names include a unique proof ID; jobs and range manifests carry
+`design_export`. SVG/PDF files carry the reference in their metadata and a proof
+label in their optional title block. Later edits do not change that checkpoint.
+The preview may show another size or flavour: checks explicitly name the current
+design that will be exported. Select **Use this box** in Range proof to promote
+an alternate preview before exporting it.
+
+Exports wait for pending edits and temporarily prevent editing while preparing
+files. **Cancel export** stops between texture operations (a canvas encoding
+already in progress must finish). Files already downloaded cannot be recalled.
+An interrupted upload can be retried with the same submission ID without adding
+a duplicate job. The external dieline kit is a template download, separate from
+the checked design export flow.
+
+Start or restart the updated bridge, pair Studio, then choose **Deploy to
+Blender**. The durable queue runs one Blender build at a time and keeps working
+while Studio is closed. Each entry shows its phase, elapsed time, recent build
+log and exact saved design reference. **Cancel** stops queued or running work;
+**Retry saved package** uses the same inputs and captured Blender settings in a
+fresh attempt folder. Completed entries provide the PNG render and Blender
+scene, plus **Restore design version**. Restoring creates a checkpoint of the
+current design first. That restoration requires the original project's local
+browser storage; downloaded jobs still retain the design reference.
+
+Queue state, original packages and per-attempt output live in
+`jobs/.render-queue/`, excluded from Git and release archives. A normal bridge
+shutdown stops the active process; interrupted work is marked for manual retry
+after restart. Queued work resumes. Success requires both a saved scene and a
+PNG with a valid end marker; a successful process exit alone is insufficient.
+Builds have a 15-minute timeout and at most 20 waiting/active queue entries.
+
+Settled file imports handled by the bridge's watcher enter this same queue.
+Legacy files without a design reference are labeled accordingly. The standalone
+`watch_jobs.py` command and legacy `/deploy` endpoint retain their previous
+synchronous behavior. The paired queue API is `GET/POST /queue`,
+`POST /queue/<id>/cancel`, `POST /queue/<id>/retry`, and authenticated
+`GET /queue/<id>/png` or `/blend` for completed results.
 
 ## Run it
 

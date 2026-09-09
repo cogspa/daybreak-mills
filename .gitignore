@@ -38,3 +38,6 @@ repomix-output.*
 
 jobs/bridge-pairing.json
 jobs/bridge_deploy_*
+
+# Local render packages, queue state and output
+jobs/.render-queue/

@@ -46,6 +46,8 @@ class SecurityTests(unittest.TestCase):
     def test_null_origin_is_not_authentication(self):
         self.assertEqual(self.request('/select','POST','{}',Origin='null')[0],401)
         self.assertEqual(self.request('/history',Origin='null')[0],401)
+        self.assertEqual(self.request('/queue',Origin='null')[0],401)
+        self.assertEqual(self.request('/queue/anything/png',Origin='null')[0],401)
     def test_preflight(self):
         code,headers,_=self.request(method='OPTIONS',Origin='null');self.assertEqual(code,204);self.assertEqual(headers['Access-Control-Allow-Origin'],'null')
     def test_paired_status(self):

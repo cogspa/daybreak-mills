@@ -4,6 +4,15 @@ Versions follow semver. `VERSION` at the repo root is the single source of
 truth; the app, the Python tools and every exported `job.json` carry it, and
 `tools/verify_geometry.py` fails if the app's inlined copy drifts from it.
 
+## 1.18.0 — 2026-09-09
+
+- Add checked design-proof exports with saved project checkpoints, immutable design references and unique proof filenames.
+- Add a durable paired Blender queue, live progress, cancellation, idempotent submission, isolated retries and version-linked results.
+- Route settled bridge file imports into the queue; verify complete scene/render output and recover interrupted attempts after restart.
+- Make illustrative barcode textures deterministic and preserve proof references in SVG/PDF metadata.
+- Add queue lifecycle, security and browser export regression checks.
+
+
 ## 1.17.0 — 2026-09-09
 
 - Replace back and side placeholder content with editable stories, ingredients, allergens and nutrition data.

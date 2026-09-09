@@ -34,7 +34,7 @@ APP = os.path.join(ROOT, "app", "daybreak-studio.html")
 CHANGELOG = os.path.join(ROOT, "CHANGELOG.md")
 DIST = os.path.join(ROOT, "dist")
 
-EXCLUDE_DIRS = {".git", "dist", "node_modules", "__pycache__", "renders", "_preview", ".vscode", ".idea"}
+EXCLUDE_DIRS = {".render-queue",".git", "dist", "node_modules", "__pycache__", "renders", "_preview", ".vscode", ".idea"}
 EXCLUDE_FILES = {".DS_Store", ".processed.json", ".history.json", ".bridge.pid", ".bridge.port", "status.html",
                  "bridge.log", "bridge-pairing.json", "Thumbs.db", "daybreak.config.json"}
 EXCLUDE_EXT = {".hdr", ".exr", ".blend1", ".blend2", ".pyc"}

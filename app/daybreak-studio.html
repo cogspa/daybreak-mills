@@ -635,6 +635,7 @@
           <div class="row"><button class="btn go" id="deploy-go">Deploy to Blender</button></div>
           <label class="chk"><input type="checkbox" id="deploy-open" checked> Open Blender with the result</label>
           <div id="deploy-out"></div>
+          <div id="export-checks" class="hint"></div><label class="chk"><input type="checkbox" id="export-draft">Export as a design proof with the listed issues</label><p id="export-message" role="status" class="hint"></p>
         </div>
 
         <div class="grp">
@@ -642,7 +643,7 @@
           <div class="row"><span class="lab">Texture resolution</span><select id="e-res">
             <option value="2048">2048 — quick look</option>
             <option value="4096" selected>4096 — matches the .blend templates</option>
-            <option value="8192">8192 — print master</option>
+            <option value="8192">8192 — high resolution</option>
           </select></div>
           <div class="row"><button class="btn go" id="e-job">Download texture + job.json</button></div>
           <p class="hint" style="margin:0">Save both into <code>cereal_box/jobs/</code>, then run<br><code>daybreak_pipeline.py</code>.</p>
@@ -655,7 +656,7 @@
         </div>
 
         <div class="grp">
-          <span class="lab">Print approval</span>
+          <span class="lab">Dieline design proof</span>
           <div class="row"><button class="btn alt" id="e-svg">Download dieline SVG</button></div>
           <div class="row"><button class="btn alt" id="e-pdf">Download dieline PDF · true size</button></div>
           <label class="chk"><input type="checkbox" id="e-marks" checked> Include fold lines, safe area and title block</label>
@@ -678,6 +679,7 @@
         <div id="e-log"></div>
       </aside>
       <div class="stage">
+        <div class="brief-out" style="padding:16px 0"><h2>Blender queue</h2><button class="btn alt" id="queue-refresh">Refresh connection &amp; queue</button><button class="btn alt" id="queue-submit-retry" hidden>Retry same submission</button><p id="queue-message" role="status"></p><div id="render-queue"></div></div>
         <div class="brief-out" id="out-body" style="padding:24px 0 8px"></div>
         <div class="brief-out" style="padding:0 0 40px;width:100%">
           <div class="rec-k" style="margin-bottom:10px">The range at this brief</div>
@@ -760,7 +762,7 @@
 </dialog>
 <script>
 "use strict";
-const APP_VERSION = "1.17.0";   /* keep equal to /VERSION — verify_geometry.py checks */
+const APP_VERSION = "1.18.0";   /* keep equal to /VERSION — verify_geometry.py checks */
 
 /* ==========================================================================
    GEOMETRY — identical maths to build_box_mesh() in the Blender scripts.
@@ -1278,11 +1280,12 @@ function drawFlap(c, r, mm, F, which){
     const bx = r.x+r.w-bw-6*mm, by = r.y+(r.h-bh)/2;
     c.fillStyle = "#ffffff"; c.fillRect(bx,by,bw,bh);
     c.fillStyle = "#000000";
-    let cx2 = bx+bw*0.06;
+    let cx2 = bx+bw*0.06, barcodeSeed=1;
+    const barcodeRandom=()=>{barcodeSeed=(barcodeSeed*1664525+1013904223)>>>0;return barcodeSeed/4294967296;};
     while(cx2 < bx+bw*0.94){
-      const t = (0.4+Math.random()*1.6)*mm;
+      const t = (0.4+barcodeRandom()*1.6)*mm;
       c.fillRect(cx2, by+bh*0.10, t, bh*0.68);
-      cx2 += t + (0.5+Math.random()*1.4)*mm;
+      cx2 += t + (0.5+barcodeRandom()*1.4)*mm;
     }
     c.fillStyle = hexA(F.onField,.75); c.textAlign="left";
     fitText(c, "LOT 000000 · BEST BEFORE", r.w*0.45, r.h*0.13, "600", 0.06);
@@ -1526,7 +1529,7 @@ async function rebuildProof(){
     renderProofLabel();
   } finally {
     proofBuilding = false;
-    if(texDirty && !renderingWork && !flavourWork) rebuildProof();        /* something changed while we were drawing */
+    if(texDirty && !renderingWork && !flavourWork && !OUTPUT.busy) rebuildProof();        /* something changed while we were drawing */
   }
 }
 
@@ -1535,7 +1538,7 @@ function loopGL(){
   if(!gl || !state.g) return;
   const vis = wsActive() || document.getElementById("v-three").classList.contains("on");
   if(!vis) return;
-  if(texDirty) rebuildProof();
+  if(texDirty && !renderingWork && !flavourWork && !OUTPUT.busy) rebuildProof();
   if(!proofBoxes.length) return;
   if(state.view.spin) state.view.az += 0.35;
 
@@ -1679,7 +1682,7 @@ function download(blob, name){
   setTimeout(()=>{ URL.revokeObjectURL(a.href); a.remove(); }, 4000);
 }
 function slug(){
-  return `daybreak_${state.g.name}_${state.rec.flavKey}`.toLowerCase();
+  return (`daybreak_${state.g.name}_${state.rec.flavKey}`+(OUTPUT.design?"_proof_"+OUTPUT.design.id.slice(0,8):"")).toLowerCase();
 }
 
 /* ---------- minimal ZIP writer (stored entries) — PNGs are already compressed,
@@ -1741,14 +1744,15 @@ async function buildRange(mode){
   const S = +$("e-res").value;
   const sizes = mode==="matrix" ? ["Mega","Family","Regular","Mini"] : [state.g.name];
   const stamp = new Date().toISOString().slice(0,16).replace(/[-:T]/g,"").replace(/(\d{8})(\d{4})/,"$1-$2");
-  const rangeName = mode==="matrix" ? `daybreak_matrix_${stamp}` : `daybreak_range_${state.g.name.toLowerCase()}_${stamp}`;
+  const rangeName = mode==="matrix" ? `daybreak_matrix_${stamp}_${OUTPUT.design?.id.slice(0,8)||""}` : `daybreak_range_${state.g.name.toLowerCase()}_${stamp}_${OUTPUT.design?.id.slice(0,8)||""}`;
   const enc = new TextEncoder(), entries = [];
-  const manifest = {format:"daybreak-range/1", generator_version:APP_VERSION, created:new Date().toISOString(),
+  const manifest = {format:"daybreak-range/1", design_export:OUTPUT.design, generator_version:APP_VERSION, created:new Date().toISOString(),
                     name:rangeName, mode, brief:state.rec.brief, texture_resolution:S,
                     sizes, flavours:Object.keys(FLAVOURS), jobs:[]};
   let i = 0;
   for(const sz of sizes){
     for(const fk of Object.keys(FLAVOURS)){
+      if(OUTPUT.busy)outputProgress(`Preparing ${i+1} of ${sizes.length*Object.keys(FLAVOURS).length} textures`);
       const {png, job, name} = await withFlavour(fk, sz, async ()=>{
         const cv = document.createElement("canvas");
         drawNet(cv, S, {guides:false});
@@ -1760,7 +1764,7 @@ async function buildRange(mode){
       entries.push({name:`${name}_${S}.png`, data:png},
                    {name:`${name}_job.json`, data:enc.encode(JSON.stringify(job,null,2))});
       manifest.jobs.push({job:`${name}_job.json`, texture:`${name}_${S}.png`, size:sz, flavour:fk, index:i++});
-      logOut(`Rendering ${i} of ${sizes.length*6} — ${FLAVOURS[fk].name} · ${sz}`, true);
+      logOut(`Rendering ${i} of ${sizes.length*Object.keys(FLAVOURS).length} — ${FLAVOURS[fk].name} · ${sz}`, true);
       await new Promise(r=>setTimeout(r, 0));                 // let the UI breathe
     }
   }
@@ -1777,7 +1781,7 @@ async function buildSingle(){
   const stamp = new Date().toISOString().slice(0,16).replace(/[-:T]/g,"").replace(/(\d{8})(\d{4})/,"$1-$2");
   const rangeName = `${name}_${stamp}`;
   const job = jobJSON(S); job.range = rangeName; job.range_index = 0;
-  const manifest = {format:"daybreak-range/1", generator_version:APP_VERSION, created:new Date().toISOString(),
+  const manifest = {format:"daybreak-range/1", design_export:OUTPUT.design, generator_version:APP_VERSION, created:new Date().toISOString(),
                     name:rangeName, mode:"single", brief:state.rec.brief, texture_resolution:S,
                     sizes:[state.g.name], flavours:[state.rec.flavKey],
                     jobs:[{job:`${name}_job.json`, texture:`${name}_${S}.png`, size:state.g.name, flavour:state.rec.flavKey, index:0}]};
@@ -1953,6 +1957,7 @@ function jobJSON(S){
   return {
     format:"daybreak-job/1",
     generator_version:APP_VERSION,
+    design_export:OUTPUT.design,
     created:new Date().toISOString(),
     texture:`${slug()}_${S}.png`,
     box:{
@@ -2007,7 +2012,8 @@ function exportSVG(){
   P.push(`<svg xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" `+
          `width="${netW.toFixed(2)}mm" height="${netH.toFixed(2)}mm" `+
          `viewBox="0 0 ${netW.toFixed(2)} ${netH.toFixed(2)}">`);
-  P.push(`<title>${BRAND.name} — ${g.name} — ${state.rec.flavour.name}</title>`);
+  P.push(`<metadata>${xmlText(JSON.stringify(OUTPUT.design || {label:"DESIGN PROOF"}))}</metadata>`);
+  P.push(`<title>DESIGN PROOF · ${xmlText(BRAND.name)} — ${g.name} — ${xmlText(state.rec.flavour.name)}</title>`);
   P.push(`<desc>True size ${netW.toFixed(1)} x ${netH.toFixed(1)} mm. Art raster ${S}px `+
          `(${(pxPerMM*25.4).toFixed(0)} DPI). Dieline UV map from cereal_boxes.blend.</desc>`);
 
@@ -2035,7 +2041,7 @@ function exportSVG(){
       P.push(`<rect x="${(r.x+4).toFixed(2)}" y="${(r.y+4).toFixed(2)}" width="${(r.w-8).toFixed(2)}" height="${(r.h-8).toFixed(2)}"/>`); }
     P.push(`</g>`);
     P.push(`<g id="title-block" font-family="Helvetica, Arial, sans-serif" font-size="3" fill="#1e2a3c">`);
-    P.push(`<text x="2" y="${(netH-6).toFixed(2)}" font-weight="700">${BRAND.name} · ${g.name.toUpperCase()} · ${state.rec.flavour.name.toUpperCase()}</text>`);
+    P.push(`<text x="2" y="${(netH-6).toFixed(2)}" font-weight="700">DESIGN PROOF ${OUTPUT.design?.id.slice(0,8)||""} · ${xmlText(BRAND.name)} · ${g.name.toUpperCase()} · ${xmlText(state.rec.flavour.name.toUpperCase())}</text>`);
     P.push(`<text x="2" y="${(netH-2).toFixed(2)}" font-size="2.2" fill="#4d5a70">`+
            `${g.mm.W.toFixed(1)} × ${g.mm.D.toFixed(1)} × ${g.mm.H.toFixed(1)} mm (W×D×H) · `+
            `net ${netW.toFixed(1)} × ${netH.toFixed(1)} mm · art ${(pxPerMM*25.4).toFixed(0)} DPI · `+
@@ -2057,7 +2063,8 @@ function kitSVG(g, S){
   const P = [];
   P.push(`<?xml version="1.0" encoding="UTF-8"?>`);
   P.push(`<svg xmlns="http://www.w3.org/2000/svg" width="${S}px" height="${S}px" viewBox="0 0 ${S} ${S}">`);
-  P.push(`<title>${BRAND.name} — ${g.name} dieline template — ${S} px texture space</title>`);
+  P.push(`<metadata>${xmlText(JSON.stringify(OUTPUT.design || {label:"DESIGN PROOF"}))}</metadata>`);
+  P.push(`<title>DESIGN PROOF · ${xmlText(BRAND.name)} — ${g.name} dieline template — ${S} px texture space</title>`);
   P.push(`<desc>Design inside the panels. Hide or delete the GUIDES layer, export a ${S} x ${S} PNG (sRGB), and load it in the studio under Assets → Dieline art → ${g.name}. `+
          `Carton ${g.mm.W.toFixed(1)} × ${g.mm.D.toFixed(1)} × ${g.mm.H.toFixed(1)} mm (W×D×H); ${(mm*25.4).toFixed(0)} DPI at the carton's true size. Generated by Daybreak Mills v${APP_VERSION}.</desc>`);
   P.push(`<g id="BOARD"><rect x="0" y="0" width="${S}" height="${S}" fill="${CARTON}"/></g>`);
@@ -2076,7 +2083,7 @@ function kitSVG(g, S){
   P.push(`</g>`);
   const tb = R("TOP"), bx = tb.x + tb.w + 6*mm, by = 4*mm;         /* title block in the dead space beside the top flap */
   P.push(`<g id="title-block" font-family="Helvetica, Arial, sans-serif" fill="#1e2a3c">`);
-  P.push(`<text x="${f(bx)}" y="${f(by+4*mm)}" font-size="${f(4*mm)}" font-weight="700">${BRAND.name} · ${g.name.toUpperCase()} · DIELINE TEMPLATE</text>`);
+  P.push(`<text x="${f(bx)}" y="${f(by+4*mm)}" font-size="${f(4*mm)}" font-weight="700">${xmlText(BRAND.name)} · ${g.name.toUpperCase()} · DIELINE TEMPLATE</text>`);
   P.push(`<text x="${f(bx)}" y="${f(by+9*mm)}" font-size="${f(2.8*mm)}" fill="#4d5a70">${g.mm.W.toFixed(1)} × ${g.mm.D.toFixed(1)} × ${g.mm.H.toFixed(1)} mm (W×D×H) · net ${(g.totalW*1000).toFixed(1)} × ${(g.totalH*1000).toFixed(1)} mm · ${S} px square · ${(mm*25.4).toFixed(0)} DPI · safe area 4 mm</text>`);
   P.push(`<text x="${f(bx)}" y="${f(by+13.5*mm)}" font-size="${f(2.8*mm)}" fill="#4d5a70">Hide GUIDES, export ${S} × ${S} PNG, load under Assets → Dieline art → ${g.name}. Do not crop, scale or move anything: this square IS the texture.</text>`);
   P.push(`</g>`);
@@ -2096,7 +2103,7 @@ function kitGuidesPNG(g, S){
   return new Promise(r=>cv.toBlob(r, "image/png"));
 }
 function kitREADME(S, sizes, rec){
-  return `${BRAND.name} — DIELINE KIT  (v${APP_VERSION}, ${new Date().toISOString().slice(0,10)})
+  return `${xmlText(BRAND.name)} — DIELINE KIT  (v${APP_VERSION}, ${new Date().toISOString().slice(0,10)})
 Brief: ${rec.brief.audience} · ${rec.brief.household} · ${rec.brief.channel} · ${rec.brief.positioning} · ${rec.brief.occasion}
 Recommended size: ${rec.size}   Flavour: ${rec.flavour.name}
 
@@ -2203,7 +2210,7 @@ function exportPDF(){
     for(const n of PANELS){ const r=rPT(n);
       cs += `${(r.x+s4).toFixed(2)} ${(r.y+s4).toFixed(2)} ${(r.w-2*s4).toFixed(2)} ${(r.h-2*s4).toFixed(2)} re S\n`; }
     cs += `[] 0 d\n`;
-    const t1 = `${BRAND.name}  ·  ${g.name.toUpperCase()}  ·  ${state.rec.flavour.name.toUpperCase()}`;
+    const t1 = `DESIGN PROOF ${OUTPUT.design?.id.slice(0,8)||""} · ${BRAND.name}  ·  ${g.name.toUpperCase()}  ·  ${state.rec.flavour.name.toUpperCase()}`;
     const t2 = `${g.mm.W.toFixed(1)} x ${g.mm.D.toFixed(1)} x ${g.mm.H.toFixed(1)} mm (WxDxH)  ·  net ${netWmm.toFixed(1)} x ${netHmm.toFixed(1)} mm  ·  art ${(pxPerMM*25.4).toFixed(0)} DPI  ·  safe area 4 mm  ·  ${new Date().toISOString().slice(0,10)}`;
     cs += `0.12 0.16 0.24 rg BT /F1 9 Tf ${(6*MM).toFixed(1)} ${(9*MM).toFixed(1)} Td (${pdfEsc(t1)}) Tj ET\n`;
     cs += `0.30 0.35 0.44 rg BT /F1 6 Tf ${(6*MM).toFixed(1)} ${(4.5*MM).toFixed(1)} Td (${pdfEsc(t2)}) Tj ET\n`;
@@ -2221,6 +2228,7 @@ function exportPDF(){
              stream:jpegBin};
   objs[6] = `<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>`;
 
+  objs[7] = `<< /Title (DESIGN PROOF ${OUTPUT.design?.id || ""}) /Subject (${pdfEsc(JSON.stringify(OUTPUT.design || {}))}) >>`;
   let out = "%PDF-1.4\n%\xE2\xE3\xCF\xD3\n";
   const offsets = [];
   for(let i=1;i<objs.length;i++){
@@ -2233,7 +2241,7 @@ function exportPDF(){
   const xref = out.length;
   out += `xref\n0 ${objs.length}\n0000000000 65535 f \n`;
   for(let i=1;i<objs.length;i++) out += String(offsets[i]).padStart(10,"0")+" 00000 n \n";
-  out += `trailer\n<< /Size ${objs.length} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  out += `trailer\n<< /Size ${objs.length} /Root 1 0 R /Info 7 0 R >>\nstartxref\n${xref}\n%%EOF`;
 
   const bytes = new Uint8Array(out.length);
   for(let i=0;i<out.length;i++) bytes[i] = out.charCodeAt(i) & 0xff;
@@ -2496,7 +2504,7 @@ function renderProofLabel(){
   else if(P.mode === "range") html = `<b>${size}</b> · every flavour · double-click a box to focus`;
   else html = `<b>Full matrix</b> · 4 sizes × ${Object.keys(FLAVOURS).length} flavours · double-click a box to focus`;
   if(proofBuilding && n !== proofPlan().length) html += ` <span style="opacity:.6">· building…</span>`;
-  $("g-label").innerHTML = html;
+  $("g-label").innerHTML = "Design proof · "+html;
 }
 $("g-mode").addEventListener("change", e=>{ state.proof.mode = e.target.value; syncProofPickers(); texDirty = true; });
 $("g-flav").addEventListener("change", e=>{ state.proof.flav = e.target.value; syncProofPickers(); texDirty = true; });
@@ -2561,7 +2569,7 @@ function renderOut(){
         <div class="rec-sub">${g.name} · ${state.rec.flavour.name}</div></div>
       <div class="rec-cell"><div class="rec-k">Front panel at ${S}</div>
         <div class="rec-v" style="font-size:21px;color:${dpi<200?"#e4816a":"#5fc39b"}">${dpi.toFixed(0)} DPI</div>
-        <div class="rec-sub">${dpi<200?"Fine for renders, below print standard — export at 8192 for press.":"Print-viable resolution."}</div></div>
+        <div class="rec-sub">${dpi<200?"Preview resolution — check requirements before printing.":"High-resolution design proof."}</div></div>
     </div>
     <div class="why"><div class="rec-k">Four files</div><ul>
       <li><i>PNG</i><span><code>${slug()}_${S}.png</code> — the texture Blender maps through the Dieline UV.</span></li>
@@ -4281,6 +4289,107 @@ function contentEditor(){
  for(const b of document.querySelectorAll('[data-ws-panel]')){const p=b.dataset.wsPanel;b.textContent=p[0]+p.slice(1).toLowerCase()+(report.overflow.some(w=>w.panel===p)?' !':'');}
 }
 
+/* Export snapshots and checks are held fixed until all files have been produced. */
+const OUTPUT={busy:false,cancel:false,controller:null,design:null,pending:null,polling:false};
+function outputProgress(text){$('output-progress').textContent=text;if(OUTPUT.cancel)throw new Error('Export cancelled.');}
+async function outputChecks(mode){
+ const results=[],sizes=mode==='matrix'?['Mini','Regular','Family','Mega']:[state.g.name],keys=mode==='one'?[state.rec.flavKey]:Object.keys(FLAVOURS);
+ for(const size of sizes)for(const key of keys){
+  outputProgress('Checking '+FLAVOURS[key].name+' · '+size);
+  const check=()=>{const report=contentReport(),issues=[];
+   if(report.overflow.length)issues.push('Text overflow: '+report.overflow.map(x=>x.panel+' '+x.field).join(', '));
+   if(report.missing.length)issues.push(report.missing.length+' packaging fields blank');
+   if(!state.assets.product[key]&&!state.assets.generic&&!state.images.some(i=>!i.hidden&&i.panel==='FRONT'))issues.push('Product image missing');
+   if(report.external_art)issues.push('External dieline art needs visual review');
+   if((state.proof.size && state.proof.size!==size)||(mode==='one' && state.proof.flav && state.proof.flav!==key))issues.push('Preview differs from this export; export follows the current design');
+   issues.push('Decorative barcode; design proof only');
+   return {size,flavour:key,name:FLAVOURS[key].name,dpi:Math.round(+$('e-res').value*state.g.k*25.4/1000),issues};};
+  results.push(mode==='one'?check():await withFlavour(key,size,check));
+ }
+ const box=$('export-checks');box.replaceChildren();
+ const title=document.createElement('strong');title.textContent='Design proof checks · '+results.length+' box'+(results.length===1?'':'es');box.append(title);
+ for(const r of results){const detail=document.createElement('details'),summary=document.createElement('summary'),text=document.createElement('p');summary.textContent=r.name+' · '+r.size+' · '+r.dpi+' DPI';text.textContent=r.issues.join('. ');detail.append(summary,text);box.append(detail);}
+ return results;
+}
+async function outputRun(kind,mode='one'){
+ if(OUTPUT.busy)return;OUTPUT.busy=true;OUTPUT.cancel=false;
+ const dialog=$('output-dialog');dialog.showModal();
+ try{await projectRun(async()=>{
+  const checks=await outputChecks(mode);
+  if(!$('export-draft').checked){$('export-message').textContent='Review the checks, then enable “Export as a design proof” to continue.';return;}
+  outputProgress('Saving the design version');
+  const snapshot=sessionSnapshot(),id=crypto.randomUUID();
+  const digest=await crypto.subtle.digest('SHA-256',new TextEncoder().encode(JSON.stringify(snapshot)));
+  const checkpoint=await projectKeepCheckpoint('Export '+id.slice(0,8),snapshot);
+  OUTPUT.design={id,project_id:SESSION.id,project_name:SESSION.name,revision:SESSION.revision,checkpoint_id:checkpoint,sha256:Array.from(new Uint8Array(digest),n=>n.toString(16).padStart(2,'0')).join(''),created:new Date().toISOString(),generator_version:APP_VERSION,label:'DESIGN PROOF',checks};
+  outputProgress('Preparing '+mode+' artwork');
+  if(kind==='queue' || kind==='range'){
+   const pkg=mode==='one'?await buildSingle():await buildRange(mode);outputProgress('Artwork ready');
+   if(kind==='range')download(pkg.blob,pkg.name+'.zip');
+   else {OUTPUT.pending={pkg,id,open:$('deploy-open').checked};await queueSubmit();}
+  }else{
+   if(kind==='job'||kind==='all'){
+    const cv=document.createElement('canvas'),S=+$('e-res').value;drawNet(cv,S,{guides:false});
+    const blob=await new Promise((resolve,reject)=>cv.toBlob(b=>b?resolve(b):reject(new Error('Texture could not be encoded.')),'image/png'));
+    outputProgress('Downloading saved artwork');const job=jobJSON(S),name=slug();
+    download(blob,name+'_'+S+'.png');download(new Blob([JSON.stringify(job,null,2)],{type:'application/json'}),name+'_job.json');
+   }
+   if(kind==='svg'||kind==='all'){outputProgress('Preparing SVG proof');exportSVG();}
+   if(kind==='pdf'||kind==='all'){outputProgress('Preparing PDF proof');exportPDF();}
+  }
+  $('export-message').textContent='Design proof '+id.slice(0,8)+' · saved revision '+SESSION.revision+' · checkpoint available in Projects.';
+ });}catch(e){$('export-message').textContent=e.message;}
+ finally{OUTPUT.design=null;OUTPUT.busy=false;dialog.close();queueRefresh();}
+}
+async function queueSubmit(){
+ const pending=OUTPUT.pending;if(!pending)return;
+ OUTPUT.controller=new AbortController();const timer=setTimeout(()=>OUTPUT.controller?.abort(),30000);
+ try{const r=await fetch(BRIDGE+'/queue?open='+(pending.open?1:0),{method:'POST',headers:{...bridgeHeaders(),'Content-Type':'application/zip','X-Daybreak-Request':pending.id},body:pending.pkg.blob,signal:OUTPUT.controller.signal});
+ const data=await r.json();if(!r.ok)throw new Error(data.error||'Queue submission failed');
+ OUTPUT.pending=null;$('queue-submit-retry').hidden=true;if(OUTPUT.cancel){await queueAction(data.entry.id,'cancel');throw new Error('Submission cancelled.');}return data.entry;
+ }catch(e){if(e.name==='AbortError')throw new Error('Upload interrupted. Refresh the queue; retrying this submission will not create a duplicate.');throw e;}finally{clearTimeout(timer);OUTPUT.controller=null;}
+}
+async function queueRefresh(){
+ $('queue-submit-retry').hidden=!OUTPUT.pending;
+ if(OUTPUT.polling || !bridge?.authenticated || !bridge.queue_api)return;
+ OUTPUT.polling=true;
+ try{
+  const r=await fetch(BRIDGE+'/queue',{headers:bridgeHeaders(),signal:AbortSignal.timeout(5000)});if(!r.ok)throw new Error('Queue unavailable');
+  const data=await r.json(),root=$('render-queue');root.replaceChildren();
+  for(const item of data.queue.slice().reverse()){
+   const card=document.createElement('div');card.className='grp';const title=document.createElement('strong'),message=document.createElement('p');
+   title.textContent=(item.design?.project_name || 'Imported package')+' · '+item.status+' · attempt '+item.attempt;
+   message.textContent=item.message+(item.started?' · '+Math.round((item.finished||Date.now()/1000)-item.started)+'s':'');card.append(title,message);
+   const ref=document.createElement('p');ref.className='hint';ref.textContent=item.design?'Design proof '+item.design.id.slice(0,8)+' · revision '+item.design.revision+' · '+item.boxes+(item.boxes===1?' box':' boxes'):'Legacy package · no saved design reference';card.append(ref);
+   const action=(label,fn)=>{const b=document.createElement('button');b.className='btn alt';b.textContent=label;b.onclick=async()=>{b.disabled=true;try{await fn();}catch(e){$('queue-message').textContent=e.message;}finally{queueRefresh();}};card.append(b);};
+   if(['queued','running','cancelling'].includes(item.status))action('Cancel',()=>queueAction(item.id,'cancel'));
+   if(['failed','cancelled','interrupted'].includes(item.status))action('Retry saved package',()=>queueAction(item.id,'retry'));
+   if(item.status==='complete')for(const [type,label] of [['png','Download render'],['blend','Download Blender scene']])action(label,async()=>{
+    const rr=await fetch(BRIDGE+item.result[type],{headers:bridgeHeaders()});if(!rr.ok)throw new Error('Result is unavailable');download(await rr.blob(),'daybreak_'+item.id+'.'+type);
+   });
+   if(item.design)action('Restore design version',async()=>{if(item.design.project_id!==SESSION.id)await projectOpen(item.design.project_id);await projectRestore(item.design.checkpoint_id);});
+   if(item.log?.length){const detail=document.createElement('details'),summary=document.createElement('summary'),pre=document.createElement('pre');summary.textContent='Build progress';pre.textContent=item.log.join('\n');pre.style.cssText='white-space:pre-wrap;font-size:11px';detail.append(summary,pre);card.append(detail);}
+   root.append(card);
+  }
+  $('queue-message').textContent=data.queue.length?'Queue continues while Studio is closed.':'No queued renders.';
+ }catch(e){$('queue-message').textContent='Cannot refresh queue. Existing jobs stay on the bridge.';}finally{OUTPUT.polling=false;}
+}
+async function queueAction(id,action){const r=await fetch(BRIDGE+'/queue/'+id+'/'+action,{method:'POST',headers:bridgeHeaders(),body:''});const data=await r.json();if(!r.ok)throw new Error(data.error);}
+function initOutput(){
+ const dialog=document.createElement('dialog');dialog.id='output-dialog';const label=document.createElement('p');label.id='output-progress';const cancel=document.createElement('button');cancel.className='btn';cancel.textContent='Cancel export';cancel.onclick=()=>{OUTPUT.cancel=true;OUTPUT.controller?.abort();};dialog.append(label,cancel);document.body.append(dialog);dialog.addEventListener('cancel',e=>{e.preventDefault();OUTPUT.cancel=true;OUTPUT.controller?.abort();});
+ const mapping={'e-job':['job','one'],'e-svg':['svg','one'],'e-pdf':['pdf','one'],'e-all':['all','one'],'e-range-go':['range',null],'deploy-go':['queue',null]};
+ for(const [id,[kind,mode]] of Object.entries(mapping))$(id).addEventListener('click',e=>{
+  e.preventDefault();e.stopImmediatePropagation();
+  if(kind==='queue' && (!bridge?.authenticated || !bridge.queue_api)){$('export-message').textContent='Start or restart the updated bridge, then pair it to use the queue. File exports remain available.';pingBridge();return;}
+  outputRun(kind,mode || $(kind==='queue'?'deploy-what':'e-range').value);
+ },true);
+ $('e-res').addEventListener('change',renderOut);
+ $('queue-refresh').onclick=()=>{pingBridge().then(queueRefresh);};
+ $('queue-submit-retry').onclick=async()=>{try{await queueSubmit();}catch(e){$('queue-message').textContent=e.message;}queueRefresh();};
+ setInterval(()=>{if($('v-out').classList.contains('on'))queueRefresh();},2000);
+}
+
+function xmlText(value){return value.replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c]));}
 /* --- boot --- */
 $("ver").textContent = "v" + APP_VERSION;
 runBrief();
@@ -4292,7 +4401,7 @@ redraw();
 initGL();
 adShow(); adPreview();       /* the designer initialised before the brief ran; size its canvas to the zone now */
 brandFillEditor();
-initWorkspace();
+initWorkspace();initOutput();
 projectBoot();
 </script>
 </body>

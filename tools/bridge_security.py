@@ -58,6 +58,15 @@ def validate_range(zf):
     jobs = manifest.get('jobs')
     if manifest.get('format') != 'daybreak-range/1' or not isinstance(jobs, list) or not 1 <= len(jobs) <= 64:
         raise ValueError('Invalid range manifest')
+    design = manifest.get('design_export')
+    if design is not None:
+        if (not isinstance(design, dict)
+                or any(not isinstance(design.get(k), str) or not 1 <= len(design[k]) <= 200
+                       for k in ('id', 'project_id', 'project_name', 'checkpoint_id'))
+                or not isinstance(design.get('revision'), int) or design['revision'] < 1
+                or not isinstance(design.get('sha256'), str) or len(design['sha256']) != 64
+                or any(c not in '0123456789abcdef' for c in design['sha256'])):
+            raise ValueError('Invalid saved design reference')
     expected = {'range.json'}
     for item in jobs:
         if not isinstance(item, dict):
@@ -68,6 +77,8 @@ def validate_range(zf):
                 or job not in names or texture not in names or job in expected):
             raise ValueError('Missing or duplicate job/texture')
         data = read_json(job)
+        if design is not None and data.get('design_export') != design:
+            raise ValueError('Job design reference does not match the package')
         if data.get('format') != 'daybreak-job/1' or data.get('texture') != texture:
             raise ValueError('Job texture does not match manifest')
         with zf.open(texture) as f:

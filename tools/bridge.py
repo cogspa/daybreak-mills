@@ -31,6 +31,7 @@ Endpoints (all on http://127.0.0.1:8765):
 import argparse
 import io
 import secrets
+import signal
 import socket
 import tempfile
 import zipfile
@@ -44,10 +45,11 @@ from urllib.parse import urlparse, parse_qs
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from bridge_security import MAX_UPLOAD, pairing_key, validate_range
+from render_queue import RenderQueue
 import watch_jobs as W                                   # noqa: E402
 
 STATE = {"blender": None, "cfg": None, "led": None, "history": None,
-         "token": None, "lock": threading.Lock(), "started": time.time(), "folders": []}
+         "queue": None, "token": None, "lock": threading.Lock(), "started": time.time(), "folders": []}
 
 
 # One Blender at a time, whichever path a build arrives by. The watcher thread
@@ -73,7 +75,7 @@ class Handler(BaseHTTPRequestHandler):
             self.send_header("Access-Control-Allow-Origin", "null")
         self.send_header("Vary", "Origin")
         self.send_header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
-        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-Daybreak-Name, X-Daybreak-Token")
+        self.send_header("Access-Control-Allow-Headers", "Content-Type, X-Daybreak-Name, X-Daybreak-Token, X-Daybreak-Request")
         self.send_header("Cache-Control", "no-store")
 
     def _allowed(self, authenticate=True):
@@ -118,6 +120,24 @@ class Handler(BaseHTTPRequestHandler):
                 "bridge": "daybreak", "version": W.repo_version(), "pairing_required": True})
         if not self._allowed():
             return
+        if u.path == "/queue":
+            return self._json(200, {"queue": STATE["queue"].snapshot() if STATE["queue"] else []})
+        if u.path.startswith("/queue/"):
+            parts = u.path.strip("/").split("/")
+            try:
+                if len(parts) != 3 or not STATE["queue"]:
+                    raise KeyError()
+                path = STATE["queue"].result_file(parts[1], parts[2])
+                data = path.read_bytes()
+            except (KeyError, OSError):
+                return self._json(404, {"error": "Completed result not found"})
+            self.send_response(200)
+            self._cors()
+            self.send_header("Content-Type", "image/png" if parts[2] == "png" else "application/octet-stream")
+            self.send_header("Content-Length", str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+            return
         if u.path == "/history":
             return self._json(200, {"history": STATE["history"][:40]})
         if u.path.startswith("/renders/"):
@@ -159,6 +179,24 @@ class Handler(BaseHTTPRequestHandler):
         if len(body) != length:
             return self._json(400, {"error": "Incomplete upload"})
 
+        if u.path == "/queue" or u.path.startswith("/queue/"):
+            if not STATE["queue"]:
+                return self._json(503, {"error": "Restart the bridge to enable the render queue"})
+            try:
+                if u.path == "/queue":
+                    cfg = dict(STATE["cfg"], open=parse_qs(u.query).get("open", ["0"])[0] == "1")
+                    request_id = self.headers.get("X-Daybreak-Request", "")[:100]
+                    record = STATE["queue"].submit(body, STATE["blender"], cfg, request_id)
+                else:
+                    parts = u.path.strip("/").split("/")
+                    if len(parts) != 3:
+                        raise KeyError()
+                    record = STATE["queue"].action(parts[1], parts[2])
+                return self._json(202, {"ok": True, "entry": record})
+            except KeyError:
+                return self._json(404, {"error": "Queue entry not found"})
+            except (ValueError, zipfile.BadZipFile, RuntimeError, NotImplementedError) as e:
+                return self._json(400, {"error": str(e)})
         if u.path == "/select":
             try:
                 path = json.loads(body or b"{}").get("path", "")
@@ -218,15 +256,53 @@ def status_payload():
     if chosen and all(b["path"] != chosen for b in installs):     # e.g. --blender to a custom path
         installs.insert(0, {"path": chosen, "version": ".".join(map(str, W.blender_version(chosen)))})
     return {
-        "bridge": "daybreak", "version": W.repo_version(), "authenticated": True,
+        "bridge": "daybreak", "version": W.repo_version(), "authenticated": True, "queue_api": 1,
         "uptime_s": int(time.time() - STATE["started"]),
         "blender": chosen,
         "blender_version": ".".join(map(str, W.blender_version(chosen))) if chosen else None,
         "blenders": [dict(b, selected=(b["path"] == chosen)) for b in installs],
         "jobs_dir": W.JOBS, "watching": STATE["folders"],
         "hdri": STATE["cfg"]["hdri"] if STATE["cfg"] else "",
-        "builds": len(STATE["history"] or []),
+        "builds": len(STATE["history"] or []) + sum(r["status"] == "complete" for r in (STATE["queue"].snapshot() if STATE["queue"] else [])),
     }
+
+
+def queue_range(cand, blender, cfg, led, history):
+    path = cand["zip"]
+    with open(path, "rb") as f:
+        body = f.read(MAX_UPLOAD+1)
+    if len(body) > MAX_UPLOAD:
+        return False
+    try:
+        STATE["queue"].submit(body, blender, cfg, "watch-"+__import__('hashlib').sha256(body).hexdigest())
+    except (ValueError, zipfile.BadZipFile, RuntimeError, NotImplementedError):
+        return False
+    led[os.path.basename(path)] = W.fingerprint(path)
+    W.save_ledger(led)
+    return True
+
+
+def queue_pair(cand, blender, cfg, led, history):
+    job = cand["job"]
+    texture = job.get("texture", "")
+    if os.path.basename(texture) != texture:
+        return False
+    output = io.BytesIO()
+    name = os.path.basename(cand["json"])
+    with zipfile.ZipFile(output, "w") as z:
+        z.write(cand["json"], name)
+        z.write(cand["tex"], texture)
+        z.writestr('range.json', json.dumps({"format":"daybreak-range/1", "design_export":job.get('design_export'), "jobs":[{"job":name,"texture":texture}]}))
+    body = output.getvalue()
+    if len(body) > MAX_UPLOAD:
+        return False
+    try:
+        STATE["queue"].submit(body, blender, cfg, "watch-"+__import__('hashlib').sha256(body).hexdigest())
+    except (ValueError, zipfile.BadZipFile, RuntimeError, NotImplementedError):
+        return False
+    led[name] = W.fingerprint(cand["json"], cand["tex"])
+    W.save_ledger(led)
+    return True
 
 
 def main():
@@ -270,6 +346,10 @@ def main():
     print(f"  watching : {', '.join(STATE['folders']) if not a.no_watch else '(off)'}")
     print(f"  status   : {os.path.relpath(W.STATUS, W.ROOT)}")
 
+    STATE["queue"] = RenderQueue(os.path.join(W.JOBS, ".render-queue"), W.PIPELINE, STATE["lock"], W.open_in_gui)
+    # Settled folder imports enter the same durable queue as Studio submissions.
+    W.process_range = queue_range
+    W.process = queue_pair
     stop = threading.Event()
     if not a.no_watch:
         t = threading.Thread(target=W.run_loop, name="watcher", daemon=True,
@@ -300,11 +380,18 @@ def main():
     if port != a.port:
         print(f"  {W.YELL}port {a.port} was busy — using {port}{W.RESET}")
     print(f"  listening: http://127.0.0.1:{port}   (the studio's Deploy panel talks to this)")
+    def shutdown(*_):
+        stop.set()
+        STATE["queue"].close()
+        raise SystemExit(0)
+    signal.signal(signal.SIGTERM, shutdown)
     try:
         srv.serve_forever()
     except KeyboardInterrupt:
         stop.set()
         print(f"\n{W.DIM}stopped{W.RESET}")
+    finally:
+        STATE["queue"].close()
     return 0
 
 
