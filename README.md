@@ -1,5 +1,22 @@
 # Daybreak Mills
 
+
+## Development roadmap
+
+| Stage | Focus | Deliverables | Status |
+| --- | --- | --- | --- |
+| 1 | Security and baseline | Local bridge pairing, restricted Blender selection, upload validation, regression checks | Complete — v1.14.1 |
+| 2 | Projects and recovery | Named projects, gallery, duplication, checkpoints, autosave, recovery and legacy session migration | Complete — v1.15.0 |
+| 3 | Box-centered workspace | Brief/project starting screen, persistent live box, clickable panels, contextual editing, Edit asset tools, undo/redo and alignment | Planned |
+| 4 | Complete packaging content | Editable back copy, ingredients, nutrition, per-flavour overrides and overflow indicators | Planned |
+| 5 | Reliable export and rendering | Proof labeling, export checks, Blender queue, progress, cancellation, retry and version-linked results | Planned |
+| 6 | Production output and polish | Printer-specific exports, accessibility, keyboard controls and performance | Planned |
+
+Each stage ends with verified workflows, a reviewable release and focused commits
+pushed to its working branch. Stage numbers describe the delivery sequence, not
+the order of recommendations in the original review. Stage 2 builds on the
+Stage 1 branch; the box-centered editing redesign is scheduled for Stage 3.
+
 A packaging pipeline that runs from a demographic brief to a rendered carton and
 a print-ready dieline, without anything being redrawn by hand in between.
 
@@ -82,12 +99,26 @@ from `file://` and offline; there is no server and no bundler.
    set as a zip (with `ads.json` and the contact sheet), or the contact sheet
    alone. *Shuffle* re-rolls the slogans.
 
-Everything you do — brief, layout, zones, sketches, imported assets, dropped
-images, ad settings — is **saved in the browser as you work** (IndexedDB) and
-comes back when the studio is reopened, after an update, or in a new tab. The
-pill at the top right says when it last saved. *Save session file* / *Load
-session file* on the Brief tab move a session between machines or keep a
-version; *New session* clears everything.
+**Projects** in the header opens the project gallery. Create, rename or duplicate
+projects, save named checkpoints, and restore earlier work. The Studio saves the
+active project in this browser as you edit, including embedded assets and view
+settings. The save indicator distinguishes unsaved, saving, saved and failed
+states. Switching projects waits for pending imports and edits to finish.
+
+Your previous autosaved session migrates into **Recovered session** on first
+launch; its original storage entry remains as a migration backup. **Import
+session as project** on the Brief tab creates a separate project, and **Save
+session file** downloads a portable backup. **New session** no longer clears
+work; its replacement opens Projects.
+
+Restoring a checkpoint or the previous autosave first saves a checkpoint of the
+current work. If two tabs edit the same project, the stale tab saves its edits as
+a **recovered copy**, preserving both versions. Storage failures keep the last
+committed revision intact and show a backup reminder. Browser storage is local
+to the browser/profile and may depend on the file location; download backups
+before clearing browser data, moving the app, or changing machines. Checkpoints
+also live in that browser. A session backup carries the active design, not its
+checkpoint history. Close old Studio tabs before upgrading project storage.
 
 **The Blender side** — put the exported texture and `job.json` in `jobs/`, then:
 

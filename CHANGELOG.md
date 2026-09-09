@@ -4,6 +4,13 @@ Versions follow semver. `VERSION` at the repo root is the single source of
 truth; the app, the Python tools and every exported `job.json` carry it, and
 `tools/verify_geometry.py` fails if the app's inlined copy drifts from it.
 
+## 1.15.0 — 2026-09-09
+
+- Add named projects, a thumbnail gallery, duplication, named checkpoints and previous-autosave recovery.
+- Migrate the legacy session without removing its backup; preserve conflicting tab edits as a recovered project.
+- Flush pending imports and sketches before switching; report storage failures and preserve newer edits during saves.
+- Document the six-stage roadmap and add project migration/recovery browser tests.
+
 ## 1.14.1 — 2026-09-09
 
 - Secure local bridge pairing, restricted Blender selection and bounded archive validation for deployments and folder imports.

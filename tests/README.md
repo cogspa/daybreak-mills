@@ -29,3 +29,12 @@ For the real Blender gate, extract `browser-single.zip` into a temporary folder
 and run your detected Blender with `--background --python
 blender/daybreak_pipeline.py -- --jobs <folder> --save <temporary-output.blend>`.
 Confirm UV drift below 1e-7. A successful stub is not a substitute for this gate.
+
+
+## Stage 2 projects
+
+Run `node tests/projects.cjs` in the same Playwright environment. It checks
+single-session migration, gallery naming, independent projects, duplication,
+checkpoints, autosave recovery, embedded assets, camera restoration, invalid
+imports, quota errors and retry, conflicting tabs, pending sketches, save races
+and reopening. It uses a disposable browser context, never the user's profile.

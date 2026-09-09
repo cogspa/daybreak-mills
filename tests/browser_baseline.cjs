@@ -16,7 +16,7 @@ const { pathToFileURL } = require('node:url');
     page.on('pageerror', e => errors.push(e.message));
     page.on('console', e => { if(e.type()==='log') logs.push(e.text()); });
     await page.goto(pathToFileURL(path.join(root,'app/daybreak-studio.html')).href);
-    await page.waitForFunction(() => typeof SESSION !== 'undefined' && state.g && !SESSION.restoring);
+    await page.waitForFunction(() => typeof SESSION !== 'undefined' && SESSION.ready && state.g && !SESSION.restoring);
     await page.waitForTimeout(1000);
     const results = await page.evaluate(async () => {
       clearTimeout(SESSION.t);
@@ -27,7 +27,7 @@ const { pathToFileURL } = require('node:url');
       asset.getContext('2d').fillRect(0,0,16,16);initial.assets.logo=asset.toDataURL();
       if(!await sessionApply(initial)) throw new Error('Session import failed');
       const restored = sessionSnapshot();
-      await sessionAutosave();
+      sessionTouch();await sessionAutosave();
       const stored = await sessionLoadStored();
       const jobs=[];
       for(const size of ['Mini','Regular','Family','Mega']){

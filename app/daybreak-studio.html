@@ -195,6 +195,24 @@
   table.spec{width:100%;border-collapse:collapse;font-size:12.5px;margin-top:8px}
   table.spec td{padding:5px 0;border-bottom:1px solid var(--line);color:var(--text-2)}
   table.spec td:last-child{text-align:right;font-family:var(--mono);color:var(--text);font-size:11.5px}
+
+  header{flex-wrap:wrap}
+  #projects-open{width:auto;max-width:230px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  #session-pill{white-space:normal!important;max-width:300px}
+  #project-dialog{background:var(--bg);color:var(--text);border:1px solid var(--line);border-radius:12px;width:min(1000px,94vw);max-height:90vh;padding:24px}
+  #project-dialog::backdrop{background:#000a}
+  .project-heading{display:flex;align-items:center;justify-content:space-between;gap:16px;margin-bottom:12px}
+  .project-heading button{width:auto}
+  .project-layout{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(250px,1fr);gap:24px}
+  #project-gallery{display:grid;grid-template-columns:repeat(auto-fill,minmax(160px,1fr));gap:12px;align-content:start}
+  .project-card{background:var(--panel);border:1px solid var(--line);border-radius:8px;padding:14px;text-align:left;cursor:pointer;min-height:120px;overflow-wrap:anywhere}
+  .project-card[aria-current=true]{border:2px solid var(--spec)}
+  .project-card img{height:90px;max-width:100%;object-fit:contain;display:block;margin:0 auto 12px}
+  .project-card strong,.project-card small{display:block}
+  .project-card small{color:var(--text-2);margin-top:6px}
+  #project-checkpoints{display:grid;gap:8px;margin-top:12px;font-size:12px;color:var(--text-2)}
+  #project-message{min-height:24px;color:var(--spec);font-size:13px}
+  @media(max-width:700px){.project-layout{grid-template-columns:1fr}}
 </style>
 </head>
 <body>
@@ -211,6 +229,7 @@
       <button role="tab" data-tab="out" aria-selected="false">5 · Export</button>
       <button role="tab" data-tab="ads" aria-selected="false">6 · Ads</button>
     </div>
+    <button class="btn alt" id="projects-open">Projects</button>
     <div class="status" id="status"></div>
     <div id="session-pill" class="hint" style="margin:0 0 0 14px;font-family:var(--mono);font-size:10.5px;white-space:nowrap"></div>
   </header>
@@ -420,9 +439,9 @@
           <p class="hint" style="margin:0 0 8px">Everything here — brief, layout, zones, sketches, images — is saved in this browser as you work and comes back when the studio is reopened. Save a file to move it or keep a version.</p>
           <div class="btnrow">
             <button class="btn alt" id="sess-save">Save session file</button>
-            <button class="btn alt" id="sess-load">Load session file</button>
+            <button class="btn alt" id="sess-load">Import session as project</button>
           </div>
-          <div class="row" style="margin-top:8px"><button class="btn alt" id="sess-new">New session · clear everything</button></div>
+          <div class="row" style="margin-top:8px"><button class="btn alt" id="sess-new">Projects · create or switch</button></div>
           <input type="file" id="sess-file" accept="application/json" hidden>
         </div>
 
@@ -677,9 +696,20 @@
   </main>
 </div>
 
+<dialog id="project-dialog" aria-labelledby="project-title">
+  <div class="project-heading"><div><h2 id="project-title">Projects</h2><p class="hint" style="margin:0">Saved in this browser. Download a backup to move your work or keep a separate copy.</p></div><button class="btn alt" id="project-close">Done</button></div>
+  <p id="project-message" role="status" aria-live="polite"></p>
+  <div id="project-controls" class="project-layout">
+    <div><div class="row"><label for="project-new-name">New project name</label><input id="project-new-name" type="text" maxlength="100" placeholder="Untitled project"><button class="btn go" id="project-new">Create project</button></div><div id="project-gallery"></div></div>
+    <div><label for="project-name">Current project</label><div class="row"><input id="project-name" type="text" maxlength="100"><div class="btnrow"><button class="btn alt" id="project-rename">Rename</button><button class="btn alt" id="project-duplicate">Duplicate</button></div></div>
+      <div class="grp"><label for="project-checkpoint-name">Save a checkpoint</label><div class="row"><input id="project-checkpoint-name" type="text" maxlength="100" placeholder="Before a new direction"><button class="btn" id="project-checkpoint">Save checkpoint</button></div><p class="hint">Restoring keeps a checkpoint of your current work first.</p><div id="project-checkpoints"></div></div>
+      <div class="grp"><button class="btn alt" id="project-recover">Recover previous autosave</button><button class="btn alt" id="project-backup" style="margin-top:8px">Download session backup</button></div>
+    </div>
+  </div>
+</dialog>
 <script>
 "use strict";
-const APP_VERSION = "1.14.1";   /* keep equal to /VERSION — verify_geometry.py checks */
+const APP_VERSION = "1.15.0";   /* keep equal to /VERSION — verify_geometry.py checks */
 
 /* ==========================================================================
    GEOMETRY — identical maths to build_box_mesh() in the Blender scripts.
@@ -891,6 +921,18 @@ function dirNotes(b, kidsy, premium, older){
 /* ==========================================================================
    STATE
    ========================================================================== */
+let projectImports=0;
+function projectImage(){
+  const image=new Image();projectImports++;
+  const done=()=>queueMicrotask(()=>{projectImports--;});
+  image.addEventListener('load',done,{once:true});image.addEventListener('error',done,{once:true});
+  return image;
+}
+function projectReader(){
+  const reader=new FileReader();projectImports++;
+  reader.addEventListener('loadend',()=>{projectImports--;},{once:true});
+  return reader;
+}
 const state = {
   brief:{audience:"families", household:"3-4", channel:"grocery", positioning:"mainstream", occasion:"everyday"},
   rec:null, g:null,
@@ -1402,7 +1444,7 @@ function initGL(){
   /* orbit */
   let dragging=false, lx=0, ly=0;
   glCanvas.addEventListener("pointerdown", e=>{dragging=true; lx=e.clientX; ly=e.clientY; glCanvas.setPointerCapture(e.pointerId);});
-  glCanvas.addEventListener("pointerup",  e=>{dragging=false;});
+  glCanvas.addEventListener("pointerup",  e=>{dragging=false;sessionTouch();});
   glCanvas.addEventListener("pointermove", e=>{
     if(!dragging) return;
     state.view.az += (e.clientX-lx)*0.5;
@@ -1411,7 +1453,7 @@ function initGL(){
   });
   glCanvas.addEventListener("wheel", e=>{
     e.preventDefault();
-    state.view.dist = Math.max(0.6, Math.min(7, state.view.dist * (1+Math.sign(e.deltaY)*0.09)));
+    state.view.dist = Math.max(0.6, Math.min(7, state.view.dist * (1+Math.sign(e.deltaY)*0.09)));sessionTouch();
   }, {passive:false});
   glCanvas.addEventListener("dblclick", e=>{
     const hit = pickBox(e.offsetX, e.offsetY);
@@ -1593,7 +1635,7 @@ function pickBox(px, py){
 }
 function focusProof(fk, size){
   state.proof = {mode:"single", flav:fk, size};
-  syncProofPickers();
+  sessionTouch();syncProofPickers();
   texDirty = true;
 }
 
@@ -1659,7 +1701,9 @@ function makeZip(entries){
 }
 
 /* ---------- the range: every flavour from the same brief, one zip ---------- */
+let flavourWork = 0;
 async function withFlavour(fk, sizeName, fn){
+  flavourWork++;
   /* Temporarily swap the recommendation, keeping the brief and the layout.
      Must AWAIT fn: with an async callback, a plain try/finally would restore
      state after the first await and the job JSON would be written for the
@@ -1669,7 +1713,7 @@ async function withFlavour(fk, sizeName, fn){
   state.spec.claim = claimFor(state.rec.brief, fk);
   state.copy = {flavour:"", claim:"", weight:""};          // typed overrides belong to one flavour only
   try { return await fn(); }
-  finally { state.rec.flavKey=keep.fk; state.rec.flavour=keep.F; state.g=keep.g; state.spec.claim=keep.claim; state.copy=keep.copy; }
+  finally { flavourWork--; state.rec.flavKey=keep.fk; state.rec.flavour=keep.F; state.g=keep.g; state.spec.claim=keep.claim; state.copy=keep.copy; }
 }
 
 async function exportRange(mode){
@@ -2307,7 +2351,7 @@ $("drop").addEventListener("drop", e=>addFiles(e.dataTransfer.files));
 
 function addFiles(files){
   [...files].filter(f=>f.type.startsWith("image/")).forEach(f=>{
-    const img = new Image();
+    const img = projectImage();
     img.onload = ()=>{
       state.images.push({id:state.nextId++, img, name:f.name, panel:"FRONT",
                          x:0.5, y:0.52, scale:62, rot:0, thumb:img.src});
@@ -2398,8 +2442,8 @@ function redraw(){
 ["g-light","g-elev","g-amb","g-gloss"].forEach(id=>$(id).addEventListener("input", e=>{
   state.light[{"g-light":"az","g-elev":"el","g-amb":"amb","g-gloss":"gloss"}[id]] = +e.target.value;
 }));
-$("g-spin").addEventListener("change", e=>state.view.spin = e.target.checked);
-$("g-reset").addEventListener("click", ()=>{ state.view.az=-32; state.view.el=14; state.view.dist=2.5; });
+$("g-spin").addEventListener("change", e=>{state.view.spin=e.target.checked;sessionTouch();});
+$("g-reset").addEventListener("click", ()=>{ state.view.az=-32; state.view.el=14; state.view.dist=2.5;sessionTouch(); });
 
 /* what to show: one box (any flavour / size), the range, or the matrix.
    g-flav is filled by fillFlavourSelects(); the first option of each picker
@@ -2563,7 +2607,7 @@ function addAssetFiles(files){
     const cls = classifyAsset(f.webkitRelativePath || f.name);
     if(!cls) return;
     matched++;
-    const img = new Image();
+    const img = projectImage();
     img.onload = ()=>{
       if(cls.slot === "product"){ state.assets.product[cls.key] = img; state.assets.names["product:"+cls.key] = f.name; }
       else if(cls.slot === "dieline"){ state.assets.dieline[cls.key] = img; state.assets.names["dieline:"+cls.key] = f.name; }
@@ -2622,10 +2666,10 @@ $("assets-save").addEventListener("click", ()=>{
 $("assets-load").addEventListener("click", ()=>$("assets-pack").click());
 $("assets-pack").addEventListener("change", e=>{
   const f = e.target.files[0]; if(!f) return;
-  const rd = new FileReader();
+  const rd = projectReader();
   rd.onload = ()=>{
     let pack; try{ pack = JSON.parse(rd.result); }catch{ return; }
-    const load = (src, cb)=>{ if(!src) return; const im = new Image(); im.onload = ()=>{cb(im); AD.cv = {}; adRenderSlots(); adShow(); renderAssetSlots(); if(state.rec) redraw();}; im.src = src; };
+    const load = (src, cb)=>{ if(!src) return; const im = projectImage(); im.onload = ()=>{cb(im); AD.cv = {}; adRenderSlots(); adShow(); renderAssetSlots(); if(state.rec) redraw();}; im.src = src; };
     state.assets.names = pack.names || {};
     if(pack.zones) state.zones = {logo:null, character:null, bowl:null, ...pack.zones};
     load(pack.logo,      im=>state.assets.logo = im);
@@ -2750,18 +2794,21 @@ function adSnapshot(){
   if(AD.undo[key].length > cap) AD.undo[key].shift();
 }
 function adCommit(){
-  /* debounced: the canvas -> an Image in the slot, then the brief redraws */
-  clearTimeout(AD.commitT);
-  AD.commitT = setTimeout(()=>{
-    const key = AD.slot, cv = adCanvas(key), slot = AD_SLOTS.find(s=>s.key===key);
-    if(!adHasInk(cv)){ adSetSlotImage(key, null); renderAssetSlots(); adRenderSlots(); if(state.rec) redraw(); adPreview(); return; }
-    /* a sketch straight onto a dieline slot is an overlay by nature; a designed
-       file replaces. Only switch if the user has not chosen a mode themselves */
-    if(adIsDieline(key) && !AD.imports[key] && !AD.modeTouched && state.dielineMode === "replace"){ state.dielineMode = "overlay"; $("ad-dieline-sel").value = "overlay"; }
-    const img = new Image();
-    img.onload = ()=>{ adSetSlotImage(key, img, "sketch · " + slot.file); renderAssetSlots(); adRenderSlots(); if(state.rec) redraw(); adPreview(); };
-    img.src = cv.toDataURL("image/png");
-  }, 250);
+  clearTimeout(AD.commitT);AD.pendingKey=AD.slot;
+  AD.commitT=setTimeout(()=>{AD.commitT=null;AD.pending=adCommitNow(AD.pendingKey);},250);
+  sessionTouch();
+}
+async function adCommitNow(key){
+  const cv=adCanvas(key),slot=AD_SLOTS.find(s=>s.key===key);
+  if(!adHasInk(cv)){adSetSlotImage(key,null);}
+  else {
+    if(adIsDieline(key) && !AD.imports[key] && !AD.modeTouched && state.dielineMode==='replace'){
+      state.dielineMode='overlay';$('ad-dieline-sel').value='overlay';
+    }
+    const img=await loadImg(cv.toDataURL('image/png'));
+    adSetSlotImage(key,img,'sketch · '+slot.file);
+  }
+  renderAssetSlots();adRenderSlots();if(state.rec)redraw();adPreview();
 }
 
 /* ---- slots list ---- */
@@ -2827,7 +2874,7 @@ function adFill(x, y){
 /* ---- import with knockout ---- */
 function adImportFile(f){
   if(!f || !f.type.startsWith("image/")) return;
-  const img = new Image();
+  const img = projectImage();
   img.onload = ()=>{
     AD.imports[AD.slot] = img; $("ad-scale").value = 100; $("ad-scale-v").textContent = "100%";
     if(adIsDieline(AD.slot)){
@@ -3331,7 +3378,7 @@ async function adsSheet(dl){
   const b = state.rec.brief;
   c.fillText(`${items.length} ads · ${b.audience} · ${b.household} · ${b.channel} · ${b.positioning} · ${b.occasion} · v${APP_VERSION}`, pad + 470, 46);
   await Promise.all(items.map((it, i)=>new Promise(res=>{
-    const img = new Image(); img.onload = ()=>{
+    const img = projectImage(); img.onload = ()=>{
       const col = i%cols, row = Math.floor(i/cols);
       const x = pad + col*(cell+pad), y = 90 + pad + row*(cell+cap+pad);
       const k = Math.min(cell/img.width, cell/img.height), w = img.width*k, h = img.height*k;
@@ -3460,8 +3507,9 @@ function brandReadEditor(){
 }
 function brandTouched(now){
   if(BR.applying) return;
+  sessionTouch();
   clearTimeout(BR.t);
-  BR.t = setTimeout(async()=>{ brandReadEditor(); await applyBrand(BRAND, {fromEditor:true}); sessionTouch(); }, now ? 0 : 350);
+  BR.t = setTimeout(async()=>{ BR.t=null; brandReadEditor(); await applyBrand(BRAND, {fromEditor:true}); sessionTouch(); }, now ? 0 : 350);
 }
 async function brandPreview(){
   if(!state.rec) return;
@@ -3494,7 +3542,7 @@ $("br-font-display-file").addEventListener("click", ()=>{ BR.fontTarget = "displ
 $("br-font-body-file").addEventListener("click", ()=>{ BR.fontTarget = "body"; $("br-font-file").click(); });
 $("br-font-file").addEventListener("change", e=>{
   const f = e.target.files[0]; if(!f) return; e.target.value = "";
-  const rd = new FileReader();
+  const rd = projectReader();
   rd.onload = ()=>{
     const family = f.name.replace(/\.[^.]+$/, "").replace(/[-_]/g, " ");
     BRAND.fonts[BR.fontTarget] = {family, data:rd.result};
@@ -3511,7 +3559,7 @@ $("br-save").addEventListener("click", ()=>{
 $("br-load").addEventListener("click", ()=>$("br-file").click());
 $("br-file").addEventListener("change", e=>{
   const f = e.target.files[0]; if(!f) return; e.target.value = "";
-  const rd = new FileReader();
+  const rd = projectReader();
   rd.onload = async()=>{ let b; try { b = JSON.parse(rd.result); } catch { $("br-font-note").textContent = "Not a brand file."; return; }
     if(b.format !== "daybreak-brand/1"){ $("br-font-note").textContent = "Not a brand file."; return; }
     await applyBrand(b); sessionTouch(); };
@@ -3520,20 +3568,26 @@ $("br-file").addEventListener("change", e=>{
 $("br-reset").addEventListener("click", async()=>{ await applyBrand(JSON.parse(JSON.stringify(DEFAULT_BRAND))); sessionTouch(); });
 
 /* ==========================================================================
-   SESSION — the whole working state, saved in this browser as you go
-   (IndexedDB: no size limit worth worrying about, unlike localStorage) and
-   restored at boot. Also a JSON file for moving between machines or keeping
-   a version. Assets and dropped images travel as PNG data URLs.
+   PROJECTS — versioned snapshots in IndexedDB, with named checkpoints and
+   a retained legacy session for migration recovery. Storage writes may fail;
+   only committed revisions are marked saved. Portable session files include
+   embedded assets, while checkpoint history stays in the browser.
    ========================================================================== */
-const SESSION = {db:null, t:null, restoring:false, savedAt:null, dirty:false};
+const SESSION = {db:null,opening:null,t:null,restoring:false,savedAt:null,dirty:false,
+  ready:false,id:null,name:'Untitled project',revision:0,edit:0,queue:Promise.resolve(),saving:false,busy:false,error:'',notice:''};
 function sessionDB(){
   if(SESSION.db) return Promise.resolve(SESSION.db);
-  return new Promise((res, rej)=>{
-    let req; try { req = indexedDB.open("daybreak-mills", 1); } catch(e){ return rej(e); }
-    req.onupgradeneeded = ()=>req.result.createObjectStore("session");
-    req.onsuccess = ()=>{ SESSION.db = req.result; res(SESSION.db); };
-    req.onerror = ()=>rej(req.error);
-  });
+  if(SESSION.opening) return SESSION.opening;
+  SESSION.opening=new Promise((resolve,reject)=>{
+    const req=indexedDB.open('daybreak-mills',2);
+    req.onupgradeneeded=()=>{for(const name of ['session','projects','checkpoints']){
+      if(!req.result.objectStoreNames.contains(name))req.result.createObjectStore(name,name==='session'?undefined:{keyPath:'id'});
+    }};
+    req.onblocked=()=>reject(new Error('Close older Studio tabs, then reload to upgrade project storage'));
+    req.onerror=()=>reject(req.error);
+    req.onsuccess=()=>{SESSION.db=req.result;SESSION.db.onversionchange=()=>{SESSION.db.close();SESSION.db=null;SESSION.opening=null;};resolve(SESSION.db);};
+  }).catch(e=>{SESSION.opening=null;throw e;});
+  return SESSION.opening;
 }
 function sessionSnapshot(){
   const A = state.assets;
@@ -3556,32 +3610,31 @@ function sessionSnapshot(){
   };
 }
 function sessionTouch(){
-  if(SESSION.restoring) return;
-  SESSION.dirty = true;
-  clearTimeout(SESSION.t);
-  SESSION.t = setTimeout(sessionAutosave, 900);
+  if(SESSION.restoring || !SESSION.ready) return;
+  SESSION.dirty=true;SESSION.edit++;clearTimeout(SESSION.t);sessionPill();
+  SESSION.t=setTimeout(sessionAutosave,900);
 }
-async function sessionAutosave(){
-  try {
-    const snap = sessionSnapshot();
-    const db = await sessionDB();
-    await new Promise((res, rej)=>{ const tx = db.transaction("session", "readwrite"); tx.objectStore("session").put(snap, "current"); tx.oncomplete = res; tx.onerror = ()=>rej(tx.error); });
-    SESSION.savedAt = snap.saved; SESSION.dirty = false;
-    sessionPill();
-  } catch(e){ console.warn("session autosave failed", e); sessionPill("autosave unavailable"); }
+function sessionAutosave(){
+  return projectQueue(projectSave).catch(e=>{
+    SESSION.error='Not saved: '+(e.message || 'storage unavailable')+'. Download a session backup before closing.';
+    sessionPill();return false;
+  });
 }
-function sessionPill(msg){
-  const t = SESSION.savedAt ? new Date(SESSION.savedAt) : null;
-  $("session-pill").innerHTML = msg ? `<span style="color:var(--spec)">${msg}</span>`
-    : t ? `<span style="color:var(--ok)">●</span> saved ${t.toTimeString().slice(0,5)}` : `<span style="color:var(--text-3)">●</span> not saved yet`;
+function sessionPill(){
+  const label=SESSION.error || SESSION.notice || (SESSION.saving?'Saving…':SESSION.dirty?'Unsaved changes':SESSION.savedAt?'Saved '+new Date(SESSION.savedAt).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):'Opening projects…');
+  $('session-pill').textContent=label;$('session-pill').setAttribute('role','status');
+  $('project-message').textContent=SESSION.error || SESSION.notice || '';
+  $('projects-open').textContent='Projects · '+SESSION.name;
 }
 async function sessionLoadStored(){
-  try {
-    const db = await sessionDB();
-    return await new Promise((res, rej)=>{ const rq = db.transaction("session").objectStore("session").get("current"); rq.onsuccess = ()=>res(rq.result || null); rq.onerror = ()=>rej(rq.error); });
-  } catch { return null; }
+  const rec=SESSION.id?await projectRead('projects',SESSION.id):null;
+  return rec?.snapshot || null;
 }
-function loadImg(src){ return new Promise(res=>{ if(!src) return res(null); const im = new Image(); im.onload = ()=>res(im); im.onerror = ()=>res(null); im.src = src; }); }
+function loadImg(src){return new Promise((resolve,reject)=>{
+  if(!src)return resolve(null);
+  if(typeof src!=='string' || !src.startsWith('data:image/'))return reject(new Error('Session image must be embedded.'));
+  const im=projectImage();im.onload=()=>resolve(im);im.onerror=()=>reject(new Error('A session image could not be loaded.'));im.src=src;
+});}
 async function sessionApply(snap){
   if(!snap || snap.format !== "daybreak-session/1") return false;
   SESSION.restoring = true;
@@ -3599,6 +3652,7 @@ async function sessionApply(snap){
     state.assetScale = {...state.assetScale, ...(snap.assetScale||{})};
     if(typeof snap.characterOnBack === "boolean"){ state.characterOnBack = snap.characterOnBack; $("l-charback").checked = snap.characterOnBack; }
     $("l-bowl").value = state.assetScale.product; $("l-char").value = state.assetScale.character;
+    if(snap.view){state.view={...snap.view};$("g-spin").checked=!!state.view.spin;}
     if(snap.proof) state.proof = {...state.proof, ...snap.proof};
     if(snap.light) state.light = {...state.light, ...snap.light};
     ["g-light","g-elev","g-amb","g-gloss"].forEach((id,i)=>$(id).value = state.light[["az","el","amb","gloss"][i]]);
@@ -3621,37 +3675,243 @@ async function sessionApply(snap){
       document.querySelectorAll("[data-pose]").forEach(e=>e.checked = (snap.ads.poses||[]).includes(e.dataset.pose));
       document.querySelectorAll("[data-aspect]").forEach(e=>e.checked = (snap.ads.aspects||[]).includes(e.dataset.aspect));
     }
-    AD.cv = {}; AD.undo = {}; AD.imports = {};
+    clearTimeout(AD.previewT);AD.cv = {}; AD.undo = {}; AD.imports = {}; AD.slot="logo";AD.pending=null;adsInvalidate();
     renderAssetSlots(); renderImgList(); adRenderSlots(); adShow(); redraw(); adPreview();
     SESSION.savedAt = snap.saved || null;
     return true;
   } finally { SESSION.restoring = false; sessionPill(); }
 }
-async function sessionClear(){
-  try { const db = await sessionDB(); await new Promise((res)=>{ const tx = db.transaction("session","readwrite"); tx.objectStore("session").delete("current"); tx.oncomplete = res; tx.onerror = res; }); } catch {}
+/* Project records and their snapshots commit together. A failed save leaves the
+   previous revision intact; a stale tab saves a separate recovery project. */
+const projectID = () => crypto.randomUUID();
+const projectName = name => String(name || 'Untitled project').trim().slice(0,100) || 'Untitled project';
+const clone = value => JSON.parse(JSON.stringify(value));
+let PROJECT_DEFAULT = null;
+function projectQueue(fn){
+  const next = SESSION.queue.then(fn);
+  SESSION.queue = next.catch(()=>{});
+  return next;
 }
-$("sess-save").addEventListener("click", ()=>{
-  const snap = sessionSnapshot();
-  const stamp = new Date().toISOString().slice(0,16).replace(/[-:T]/g,"").replace(/(\d{8})(\d{4})/,"$1-$2");
-  download(new Blob([JSON.stringify(snap)], {type:"application/json"}), `daybreak_session_${stamp}.json`);
+async function projectDB(stores, mode, fn){
+  const db = await sessionDB();
+  return new Promise((resolve,reject)=>{
+    const tx = db.transaction(stores,mode); let value;
+    tx.oncomplete = ()=>resolve(value);
+    tx.onabort = tx.onerror = ()=>reject(tx.error || new Error('Project storage failed'));
+    try { fn(tx, result=>{value=result;}); } catch(e){ tx.abort(); reject(e); }
+  });
+}
+function projectRead(store,key){
+  return projectDB([store],'readonly',(tx,done)=>{const r=tx.objectStore(store).get(key);r.onsuccess=()=>done(r.result);});
+}
+async function projectSettle(){
+  // Finish file imports, debounced edits and temporary flavour rendering before
+  // capturing a project or replacing its state. Never let an old callback land
+  // in the next project.
+  const started=Date.now();
+  do {
+    while(projectImports || flavourWork || BR.applying || ADS.busy){
+      if(Date.now()-started>30000) throw new Error('Finish the current import or render, then try again.');
+      await new Promise(r=>setTimeout(r,25));
+    }
+    if(BR.t){clearTimeout(BR.t);BR.t=null;brandReadEditor();await applyBrand(BRAND,{fromEditor:true});}
+    if(AD.commitT){clearTimeout(AD.commitT);AD.commitT=null;AD.pending=adCommitNow(AD.pendingKey);}
+    if(AD.pending){await AD.pending;AD.pending=null;}
+  } while(projectImports || flavourWork || BR.applying || BR.t || AD.commitT);
+}
+function projectThumbnail(){
+  const net=document.createElement('canvas');drawNet(net,256,{guides:false});
+  const r=panelRect(state.g,'FRONT',256),cv=document.createElement('canvas');
+  cv.width=Math.round(r.w);cv.height=Math.round(r.h);
+  cv.getContext('2d').drawImage(net,r.x,r.y,r.w,r.h,0,0,cv.width,cv.height);
+  return cv.toDataURL('image/png');
+}
+function projectValidate(snap){
+  if(!snap || snap.format!=='daybreak-session/1') throw new Error('Choose a Daybreak session file.');
+  const s=clone(snap);
+  for(const k of ['brand','brief','copy','spec','zones','assets','assetScale','view','proof','light','ads','overrides']){
+    if(s[k]!=null && (typeof s[k]!=='object' || Array.isArray(s[k]))) throw new Error(`Invalid session ${k}.`);
+  }
+  if(s.brand){
+    if(!Array.isArray(s.brand.flavours) || !s.brand.flavours.length || s.brand.flavours.some(f=>!f || typeof f.name!=='string')) throw new Error('Invalid brand in session.');
+    if(typeof s.brand.name!=='string') throw new Error('Invalid brand name.');
+  }
+  if(s.images && !Array.isArray(s.images)) throw new Error('Invalid session images.');
+  return s;
+}
+async function projectApply(snap){
+  const validated=projectValidate(snap), previous=sessionSnapshot();
+  try { if(!await sessionApply({...clone(PROJECT_DEFAULT),...validated})) throw new Error('Session could not be restored.'); }
+  catch(e){ await sessionApply(previous); throw e; }
+}
+async function projectSave(){
+  if(!SESSION.ready || !SESSION.id || !SESSION.dirty) return;
+  await projectSettle();
+  const edit=SESSION.edit, snap=sessionSnapshot(), id=SESSION.id, revision=SESSION.revision;
+  const thumb=projectThumbnail(); SESSION.saving=true; sessionPill();
+  try {
+    const result=await projectDB(['projects','session'],'readwrite',(tx,done)=>{
+      const store=tx.objectStore('projects'),req=store.get(id);
+      req.onsuccess=()=>{
+        const old=req.result;
+        if(!old){tx.abort();return;}
+        const conflict=old.revision!==revision;
+        const record={id:conflict?projectID():id,name:conflict?projectName(SESSION.name+' (recovered copy)'):SESSION.name,
+          created:conflict?snap.saved:old.created,updated:snap.saved,revision:conflict?1:old.revision+1,
+          snapshot:snap,thumbnail:thumb,recovery:conflict?null:old.snapshot};
+        store.put(record);tx.objectStore('session').put(record.id,'activeProject');done({record,conflict});
+      };
+    });
+    SESSION.id=result.record.id;SESSION.name=result.record.name;SESSION.revision=result.record.revision;
+    SESSION.savedAt=snap.saved;SESSION.dirty=SESSION.edit!==edit;SESSION.error='';
+    if(result.conflict) SESSION.notice='Another tab saved this project. Your edits were saved as a recovered copy.';
+  } finally {SESSION.saving=false;sessionPill();}
+}
+async function projectActivate(record,create=false){
+  const previous=sessionSnapshot();
+  await projectApply(record.snapshot);
+  if(create) record.thumbnail=projectThumbnail();
+  try {
+    await projectDB(['projects','session'],'readwrite',(tx)=>{
+      if(create) tx.objectStore('projects').add(record);
+      tx.objectStore('session').put(record.id,'activeProject');
+    });
+  } catch(e){await sessionApply(previous);throw e;}
+  SESSION.id=record.id;SESSION.name=record.name;SESSION.revision=record.revision;
+  SESSION.savedAt=record.updated;SESSION.dirty=false;SESSION.error='';SESSION.notice='';SESSION.edit++;
+  sessionPill();
+}
+function projectRun(fn){
+  return projectQueue(async()=>{
+    if(!SESSION.ready) throw new Error('Projects are still opening.');
+    SESSION.busy=true;document.querySelector('.app').inert=true;
+    $('project-controls').inert=true;
+    try {
+      await projectSettle();await projectSave();
+      const value=await fn();await projectRender();return value;
+    } catch(e){SESSION.error=e.message || 'Could not save. Download a session backup before closing.';sessionPill();throw e;}
+    finally {SESSION.busy=false;document.querySelector('.app').inert=false;$('project-controls').inert=false;}
+  });
+}
+function projectCreate(name,snapshot){
+  return projectRun(async()=>{
+    const snap=projectValidate(snapshot || PROJECT_DEFAULT), now=new Date().toISOString();
+    const rec={id:projectID(),name:projectName(name),created:now,updated:now,revision:1,snapshot:snap,thumbnail:'',recovery:null};
+    await projectActivate(rec,true);return rec.id;
+  });
+}
+function projectOpen(id){
+  return projectRun(async()=>{
+    const rec=await projectRead('projects',id);if(!rec) throw new Error('Project not found.');
+    await projectActivate(rec);
+  });
+}
+function projectDuplicate(name){
+  return projectRun(async()=>{
+    const now=new Date().toISOString(),rec={id:projectID(),name:projectName(name || SESSION.name+' copy'),created:now,updated:now,
+      revision:1,snapshot:sessionSnapshot(),thumbnail:projectThumbnail(),recovery:null};
+    await projectActivate(rec,true);return rec.id;
+  });
+}
+function projectRename(name){
+  return projectRun(async()=>{SESSION.name=projectName(name);SESSION.dirty=true;SESSION.edit++;await projectSave();});
+}
+async function projectKeepCheckpoint(name,snapshot=sessionSnapshot()){
+  const rec={id:projectID(),projectId:SESSION.id,name:projectName(name),created:new Date().toISOString(),snapshot};
+  await projectDB(['checkpoints'],'readwrite',tx=>tx.objectStore('checkpoints').add(rec));return rec.id;
+}
+function projectCheckpoint(name){return projectRun(()=>projectKeepCheckpoint(name || 'Checkpoint'));}
+function projectRestore(id){
+  return projectRun(async()=>{
+    const rec=await projectRead('checkpoints',id);
+    if(!rec || rec.projectId!==SESSION.id) throw new Error('Checkpoint not found for this project.');
+    await projectKeepCheckpoint('Before restoring '+rec.name);
+    await projectApply(rec.snapshot);SESSION.dirty=true;SESSION.edit++;await projectSave();
+  });
+}
+function projectRecover(){
+  return projectRun(async()=>{
+    const rec=await projectRead('projects',SESSION.id);
+    if(!rec.recovery) throw new Error('No earlier autosave is available yet.');
+    await projectKeepCheckpoint('Before recovering previous autosave');
+    await projectApply(rec.recovery);SESSION.dirty=true;SESSION.edit++;await projectSave();
+  });
+}
+async function projectRender(force=false){
+  if(!force && !$('project-dialog').open) return;
+  const records=await projectDB(['projects','checkpoints'],'readonly',(tx,done)=>{
+    const p=tx.objectStore('projects').getAll(),c=tx.objectStore('checkpoints').getAll();
+    c.onsuccess=()=>done({projects:p.result,checkpoints:c.result});
+  });
+  $('project-name').value=SESSION.name;
+  $('project-gallery').replaceChildren();$('project-checkpoints').replaceChildren();
+  for(const rec of records.projects.sort((a,b)=>b.updated.localeCompare(a.updated))){
+    const card=document.createElement('button');card.className='project-card';card.type='button';
+    card.setAttribute('aria-current',String(rec.id===SESSION.id));card.dataset.project=rec.id;
+    if(rec.thumbnail){const image=document.createElement('img');image.src=rec.thumbnail;image.alt='';card.append(image);}
+    const title=document.createElement('strong');title.textContent=rec.name;
+    const date=document.createElement('small');date.textContent=(rec.id===SESSION.id?'Open · ':'')+new Date(rec.updated).toLocaleString();
+    card.append(title,date);card.onclick=()=>projectUI(()=>projectOpen(rec.id));$('project-gallery').append(card);
+  }
+  const checkpoints=records.checkpoints.filter(c=>c.projectId===SESSION.id).sort((a,b)=>b.created.localeCompare(a.created));
+  if(!checkpoints.length) $('project-checkpoints').textContent='No checkpoints yet. Save one before trying a new direction.';
+  for(const c of checkpoints){
+    const button=document.createElement('button');button.className='btn alt';button.dataset.checkpoint=c.id;
+    button.textContent='Restore '+c.name+' · '+new Date(c.created).toLocaleString();
+    button.onclick=()=>projectUI(()=>projectRestore(c.id));$('project-checkpoints').append(button);
+  }
+  $('project-recover').disabled=!records.projects.find(p=>p.id===SESSION.id)?.recovery;
+}
+async function projectUI(fn){try{await fn();}catch(e){SESSION.error=e.message;sessionPill();}}
+async function projectShow(){
+  await projectUI(async()=>{await projectRun(async()=>{});await projectRender(true);$('project-dialog').showModal();});
+}
+async function projectBoot(){
+  document.querySelector('.app').inert=true;
+  try {
+    await projectSettle();PROJECT_DEFAULT=sessionSnapshot();
+    const rec=await projectDB(['session','projects'],'readwrite',(tx,done)=>{
+      const session=tx.objectStore('session'),projects=tx.objectStore('projects');
+      const req=session.get('activeProject');req.onsuccess=()=>{
+        if(req.result){const r=projects.get(req.result);r.onsuccess=()=>done(r.result);return;}
+        const old=session.get('current');old.onsuccess=()=>{
+          const now=new Date().toISOString(),record={id:projectID(),name:old.result?'Recovered session':'Untitled project',created:now,updated:now,
+            revision:1,snapshot:old.result || clone(PROJECT_DEFAULT),thumbnail:'',recovery:null};
+          projects.add(record);session.put(record.id,'activeProject');done(record);
+          // Keep the legacy current key as an untouched migration backup.
+        };
+      };
+    });
+    if(!rec) throw new Error('Saved project is unavailable. Your stored projects have not been changed.');
+    await projectActivate(rec);
+    SESSION.ready=true;SESSION.error='';
+  } catch(e){SESSION.error='Project storage unavailable: '+e.message+'. Download a session backup before closing.';SESSION.ready=true;}
+  finally {document.querySelector('.app').inert=false;sessionPill();}
+}
+for(const id of ['v-three','v-ads']){
+  for(const event of ['input','change']) $(id).addEventListener(event,sessionTouch);
+}
+$('projects-open').addEventListener('click',projectShow);
+$('project-close').addEventListener('click',()=>$('project-dialog').close());
+$('project-new').addEventListener('click',()=>projectUI(()=>projectCreate($('project-new-name').value)));
+$('project-rename').addEventListener('click',()=>projectUI(()=>projectRename($('project-name').value)));
+$('project-duplicate').addEventListener('click',()=>projectUI(()=>projectDuplicate()));
+$('project-checkpoint').addEventListener('click',()=>projectUI(()=>projectCheckpoint($('project-checkpoint-name').value)));
+$('project-recover').addEventListener('click',()=>projectUI(projectRecover));
+$('project-backup').addEventListener('click',()=>$('sess-save').click());
+$('sess-save').addEventListener('click',()=>projectUI(async()=>{
+  await projectSettle();const snap=sessionSnapshot();snap.projectName=SESSION.name;
+  download(new Blob([JSON.stringify(snap)],{type:'application/json'}),`${projectName(SESSION.name).replace(/[^a-z0-9_-]/gi,'_')}_session.json`);
+}));
+$('sess-load').addEventListener('click',()=>$('sess-file').click());
+$('sess-file').addEventListener('change',e=>{
+  const f=e.target.files[0];e.target.value='';if(!f)return;
+  projectUI(async()=>{const snap=projectValidate(JSON.parse(await f.text()));await projectCreate(snap.projectName || f.name.replace(/\.json$/i,''),snap);});
 });
-$("sess-load").addEventListener("click", ()=>$("sess-file").click());
-$("sess-file").addEventListener("change", e=>{
-  const f = e.target.files[0]; if(!f) return; e.target.value = "";
-  const rd = new FileReader();
-  rd.onload = async()=>{ let snap; try { snap = JSON.parse(rd.result); } catch { return sessionPill("not a session file"); }
-    if(await sessionApply(snap)) sessionTouch(); else sessionPill("not a session file"); };
-  rd.readAsText(f);
-});
-$("sess-new").addEventListener("click", async()=>{
-  /* two clicks, no modal: the first arms the button for four seconds */
-  const btn = $("sess-new");
-  if(!btn.dataset.armed){ btn.dataset.armed = "1"; btn.textContent = "Sure? Click again to clear everything"; setTimeout(()=>{ delete btn.dataset.armed; btn.textContent = "New session · clear everything"; }, 4000); return; }
-  await sessionClear();
-  SESSION.restoring = true;               /* stop the unload autosave from writing the old state back */
-  location.reload();
-});
-window.addEventListener("beforeunload", ()=>{ if(SESSION.dirty && !SESSION.restoring){ clearTimeout(SESSION.t); sessionAutosave(); } });
+$('sess-new').addEventListener('click',projectShow);
+document.addEventListener('visibilitychange',()=>{if(document.visibilityState==='hidden') sessionAutosave();});
+window.addEventListener('beforeunload',e=>{if(SESSION.dirty){e.preventDefault();e.returnValue='';}});
+
 
 /* --- boot --- */
 $("ver").textContent = "v" + APP_VERSION;
@@ -3664,10 +3924,7 @@ redraw();
 initGL();
 adShow(); adPreview();       /* the designer initialised before the brief ran; size its canvas to the zone now */
 brandFillEditor();
-sessionLoadStored().then(async snap=>{
-  if(snap && await sessionApply(snap)) sessionPill();
-  else sessionPill();
-});
+projectBoot();
 </script>
 </body>
 </html>
