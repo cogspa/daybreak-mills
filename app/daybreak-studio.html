@@ -243,6 +243,11 @@
 #ws-content-tools input:disabled, #ws-content-tools textarea:disabled {opacity:.6;}
 #ws-content-status details {margin-top:8px;}
 #ws-content-status summary {cursor:pointer;}
+#full-dieline{width:min(1100px,94vw);max-height:94vh;padding:20px;background:var(--bg);color:var(--text);border:1px solid #778397;border-radius:12px}
+#full-dieline::backdrop{background:#000a}
+#full-dieline canvas{display:block;max-width:100%;max-height:65vh;width:auto;height:auto;margin:auto;cursor:pointer}
+#full-dieline .btnrow{flex-wrap:wrap;gap:8px}
+#full-dieline :focus-visible{outline:3px solid #62e0ba;outline-offset:3px}
 </style>
 </head>
 <body>
@@ -267,7 +272,7 @@
 
   <main>
     <section class="view on" id="v-workspace">
-      <div class="ws-toolbar"><strong>Design workspace</strong><button class="btn alt" id="ws-brief">Brief</button><button class="btn alt" id="ws-brand">Brand</button><button class="btn alt" id="ws-undo" disabled>Undo</button><button class="btn alt" id="ws-redo" disabled>Redo</button></div>
+      <div class="ws-toolbar"><strong>Design workspace</strong><button class="btn alt" id="ws-full-dieline">Full dieline</button><button class="btn alt" id="ws-brief">Brief</button><button class="btn alt" id="ws-brand">Brand</button><button class="btn alt" id="ws-undo" disabled>Undo</button><button class="btn alt" id="ws-redo" disabled>Redo</button></div>
       <div class="ws-body">
         <aside class="ws-sidebar"><span class="lab">Panels</span><div class="ws-panels"><button data-ws-panel="FRONT">Front</button><button data-ws-panel="BACK">Back</button><button data-ws-panel="LEFT">Left</button><button data-ws-panel="RIGHT">Right</button><button data-ws-panel="TOP">Top</button><button data-ws-panel="BOTTOM">Bottom</button></div>
           <span class="lab">Image layers</span><p class="hint">Select a layer to position, hide or lock it.</p><div id="ws-layers"></div><button class="btn" id="ws-import" style="margin-top:14px">Add image</button><p class="hint" style="margin-top:12px">Imported images stack above product artwork and below the logo and pack copy.</p>
@@ -762,7 +767,7 @@
 </dialog>
 <script>
 "use strict";
-const APP_VERSION = "1.18.1";   /* keep equal to /VERSION — verify_geometry.py checks */
+const APP_VERSION = "1.18.2";   /* keep equal to /VERSION — verify_geometry.py checks */
 
 /* ==========================================================================
    GEOMETRY — identical maths to build_box_mesh() in the Blender scripts.
@@ -4426,6 +4431,21 @@ function initOutput(){
 }
 
 function xmlText(value){return value.replace(/[<>&]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[c]));}
+
+function initFullDieline(){
+ const dialog=document.createElement('dialog');dialog.id='full-dieline';dialog.setAttribute('aria-labelledby','full-dieline-title');
+ dialog.innerHTML='<div class="btnrow"><h2 id="full-dieline-title">Full dieline</h2><button class="btn alt" id="full-dieline-close">Close</button></div><p id="full-dieline-info" class="hint"></p><label class="chk"><input id="full-dieline-guides" type="checkbox" checked>Show panel and safe-area guides</label><canvas id="full-dieline-canvas" aria-label="Full flattened carton artwork. Use the panel buttons below to edit a face."></canvas><p class="hint">Click a panel to edit it, or choose a panel below.</p><div class="btnrow" id="full-dieline-panels"></div>';
+ document.body.append(dialog);
+ const paint=()=>{if(!dialog.open)return;drawNet($('full-dieline-canvas'),2048,{guides:$('full-dieline-guides').checked});$('full-dieline-info').textContent=state.g.name+' · '+state.rec.flavour.name+' · '+(state.g.totalW*1000).toFixed(1)+' × '+(state.g.totalH*1000).toFixed(1)+' mm';};
+ const edit=panel=>{dialog.close();wsMode('layout');wsSelectPanel(panel,true);document.querySelector('[data-ws-panel="'+panel+'"]').focus();};
+ PANELS.forEach(panel=>{const b=document.createElement('button');b.className='btn alt';b.textContent=panel[0]+panel.slice(1).toLowerCase();b.onclick=()=>edit(panel);$('full-dieline-panels').append(b);});
+ $('ws-full-dieline').onclick=()=>projectUI(()=>projectRun(()=>{dialog.showModal();paint();}));
+ $('full-dieline-close').onclick=()=>dialog.close();$('full-dieline-guides').onchange=paint;
+ $('full-dieline-canvas').onclick=e=>{const cv=e.currentTarget,b=cv.getBoundingClientRect(),x=(e.clientX-b.left)*cv.width/b.width,y=(e.clientY-b.top)*cv.height/b.height;
+  const panel=PANELS.find(n=>{const r=panelRect(state.g,n,cv.width);return x>=r.x&&x<=r.x+r.w&&y>=r.y&&y<=r.y+r.h;});if(panel)edit(panel);
+ };
+}
+
 /* --- boot --- */
 $("ver").textContent = "v" + APP_VERSION;
 runBrief();
@@ -4437,7 +4457,7 @@ redraw();
 initGL();
 adShow(); adPreview();       /* the designer initialised before the brief ran; size its canvas to the zone now */
 brandFillEditor();
-initWorkspace();initOutput();
+initWorkspace();initOutput();initFullDieline();
 projectBoot();
 </script>
 </body>

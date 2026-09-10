@@ -507,3 +507,7 @@ These checks validate the package container, not print readiness or nutrition
 content. Local users and deliberately imported files remain trusted inputs.
 
 See `tests/README.md` for the repeatable Stage 1 checks and sample scenarios.
+
+### View the complete flattened box
+
+Choose **Workspace → Full dieline** to see all six panels together. Toggle guides, click a face or use the panel buttons to return to editing. Escape closes the viewer.

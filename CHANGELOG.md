@@ -4,6 +4,11 @@ Versions follow semver. `VERSION` at the repo root is the single source of
 truth; the app, the Python tools and every exported `job.json` carry it, and
 `tools/verify_geometry.py` fails if the app's inlined copy drifts from it.
 
+## 1.18.2 — 2026-09-10
+
+- Add a full flattened dieline viewer with optional guides and clickable or keyboard-accessible panel editing.
+
+
 ## 1.18.1 — 2026-09-09
 
 - Replace routine pairing-file selection with Connect to Blender and an explicit local approval window with matching codes.
