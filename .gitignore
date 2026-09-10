@@ -41,3 +41,8 @@ jobs/bridge_deploy_*
 
 # Local render packages, queue state and output
 jobs/.render-queue/
+
+# Private assistant credentials and optional runtime
+.gemini-key*
+.venv-chat/
+.env

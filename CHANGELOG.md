@@ -4,6 +4,12 @@ Versions follow semver. `VERSION` at the repo root is the single source of
 truth; the app, the Python tools and every exported `job.json` carry it, and
 `tools/verify_geometry.py` fails if the app's inlined copy drifts from it.
 
+## 1.20.0 — 2026-09-10
+
+- Add an offline six-lesson Studio tutorial and project-separated Gemini chat through a paired local LangChain gateway.
+- Add private local key setup, optional minimal app context, official labeling-source retrieval, timeouts and credential-safe error handling.
+- Exclude assistant credentials/runtime from releases; document limitations and add backend/browser regression coverage.
+
 ## 1.19.1 — 2026-09-10
 
 - Make shelf numeric controls readable with dark backgrounds, bright values and separate labeled rows.

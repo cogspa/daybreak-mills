@@ -34,8 +34,8 @@ APP = os.path.join(ROOT, "app", "daybreak-studio.html")
 CHANGELOG = os.path.join(ROOT, "CHANGELOG.md")
 DIST = os.path.join(ROOT, "dist")
 
-EXCLUDE_DIRS = {".render-queue",".git", "dist", "node_modules", "__pycache__", "renders", "_preview", ".vscode", ".idea"}
-EXCLUDE_FILES = {".DS_Store", ".processed.json", ".history.json", ".bridge.pid", ".bridge.port", "status.html",
+EXCLUDE_DIRS = {".venv-chat",".render-queue",".git", "dist", "node_modules", "__pycache__", "renders", "_preview", ".vscode", ".idea"}
+EXCLUDE_FILES = {".gemini-key", ".env",".DS_Store", ".processed.json", ".history.json", ".bridge.pid", ".bridge.port", "status.html",
                  "bridge.log", "bridge-pairing.json", "Thumbs.db", "daybreak.config.json"}
 EXCLUDE_EXT = {".hdr", ".exr", ".blend1", ".blend2", ".pyc"}
 
@@ -100,7 +100,7 @@ def package(version):
         for dirpath, dirs, files in os.walk(ROOT):
             dirs[:] = [d for d in dirs if d not in EXCLUDE_DIRS and not runtime_job(dirpath, d)]
             for name in files:
-                if name in EXCLUDE_FILES or os.path.splitext(name)[1] in EXCLUDE_EXT or runtime_job(dirpath, name):
+                if name.startswith(".gemini-key") or name in EXCLUDE_FILES or os.path.splitext(name)[1] in EXCLUDE_EXT or runtime_job(dirpath, name):
                     continue
                 full = os.path.join(dirpath, name)
                 rel = os.path.relpath(full, ROOT)

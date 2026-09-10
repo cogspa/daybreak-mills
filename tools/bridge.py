@@ -47,6 +47,7 @@ sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from bridge_security import MAX_UPLOAD, pairing_key, validate_range
 from render_queue import RenderQueue
 from bridge_pairing import PairingRequests
+import assistant_service
 import watch_jobs as W                                   # noqa: E402
 
 PAIRING = PairingRequests()
@@ -123,6 +124,8 @@ class Handler(BaseHTTPRequestHandler):
                 "bridge": "daybreak", "version": W.repo_version(), "pairing_required": True})
         if not self._allowed():
             return
+        if u.path == "/assistant/status":
+            return self._json(200, assistant_service.status())
         if u.path == "/queue":
             return self._json(200, {"queue": STATE["queue"].snapshot() if STATE["queue"] else []})
         if u.path.startswith("/queue/"):
@@ -171,7 +174,7 @@ class Handler(BaseHTTPRequestHandler):
             length = int(self.headers.get("Content-Length", ""))
         except ValueError:
             return self._json(400, {"error": "Invalid Content-Length"})
-        limit = 16384 if u.path == "/select" or u.path.startswith("/pair/") else MAX_UPLOAD
+        limit = 120000 if u.path.startswith("/assistant/") else 16384 if u.path == "/select" or u.path.startswith("/pair/") else MAX_UPLOAD
         if length < 0 or length > limit:
             return self._json(413, {"error": "Upload exceeds request limit"})
         self.connection.settimeout(30)
@@ -182,6 +185,15 @@ class Handler(BaseHTTPRequestHandler):
         if len(body) != length:
             return self._json(400, {"error": "Incomplete upload"})
 
+        if u.path in ('/assistant/chat','/assistant/key'):
+            try:
+                data=json.loads(body)
+                result=assistant_service.save_key(data) if u.path.endswith('/key') else assistant_service.answer(data)
+                return self._json(200,result)
+            except (ValueError,TypeError):
+                return self._json(400, {'error': 'Check your key, runtime installation, question length, model access and network connection, then retry.'})
+            except Exception:
+                return self._json(503, {'error': 'Assistant unavailable. Try again shortly.'})
         if u.path == "/pair/start":
             if sys.platform != 'darwin':
                 return self._json(503, {"error": "Use Advanced connection to choose the pairing file on this platform."})
@@ -274,7 +286,7 @@ def status_payload():
     if chosen and all(b["path"] != chosen for b in installs):     # e.g. --blender to a custom path
         installs.insert(0, {"path": chosen, "version": ".".join(map(str, W.blender_version(chosen)))})
     return {
-        "bridge": "daybreak", "version": W.repo_version(), "authenticated": True, "queue_api": 1, "pairing_api": 1,
+        "bridge": "daybreak", "version": W.repo_version(), "authenticated": True, "queue_api": 1, "pairing_api": 1, "assistant_api": 1,
         "uptime_s": int(time.time() - STATE["started"]),
         "blender": chosen,
         "blender_version": ".".join(map(str, W.blender_version(chosen))) if chosen else None,

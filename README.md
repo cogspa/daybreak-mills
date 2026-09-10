@@ -521,3 +521,40 @@ Construction reference: [seal-end carton structure](https://www.pakingduck.com/p
 ### Shelf scenes and planograms
 
 In **Export → Blender scene**, choose vertical flavour blocks, one product per shelf, or mixed assortment. Set 1–5 shelves, 1–12 facings per shelf and 1–3 boxes deep. Choose the products under **Deploy to Blender** (one, every flavour or full matrix), then deploy or download a range ZIP. Settings are saved with the project and export checkpoint. Blender reads the manifest and builds shelf decks, front rails, backing and uprights; shared carton meshes preserve the artwork UVs. The bay fits the largest selected box. Horizontal layouts cycle through products by shelf; mixed layouts shift the assortment by row. There is no aisle scene in the browser preview yet. Each export produces one selected planogram for comparison with other saved exports.
+
+### Tutorial and Gemini assistant
+
+Open **Help & assistant** in the header. Six lessons cover projects, sketching/imports,
+packaging content, prepress review, shelf planograms and ads, with buttons that open
+the corresponding app areas. Lessons work without Gemini or an API key.
+
+For chat, install the optional local runtime once with `python3 tools/setup_chat.py`,
+then restart the bridge. In **Help & assistant → Setup**, connect the bridge and
+enter your Gemini API key using **Save key locally**. Do not paste it into a chat.
+The installer creates `.venv-chat`; LangChain uses the Gemini Developer API through
+`langchain-google-genai`. The default model is `gemini-2.5-flash`; the bridge environment
+variable `DAYBREAK_CHAT_MODEL` can select another model your key can access.
+
+The paired local bridge stores the key in `.gemini-key` with owner-only permissions.
+That file, temporary key files, `.env` and the runtime are excluded from Git and release
+archives. Environment keys `GEMINI_API_KEY` / `GOOGLE_API_KEY` are fallback options.
+Provider exceptions are not returned verbatim, and LangSmith tracing is disabled.
+Chat questions/history go to Google and may incur API charges. Chat is held only in
+page memory, separated by project and cleared on reload. Optional context shares only
+the current view, panel, size, shelf preset and counts of missing/overflow fields.
+Artwork, ingredient text and other project content are not automatically included.
+
+The assistant explains actions but cannot modify projects or initiate exports. Nutrition
+questions use the selected market and bounded retrieval from official FDA, CFIA, UK or EU
+reference pages. Source retrieval failures are shown; this is reference-assisted guidance,
+not comprehensive legal research or label certification. It must not invent nutrient values
+or claim current RGB drafts are CMYK-ready. Always obtain printer and qualified labeling
+review. **Stop waiting** aborts the browser request; an already-started provider call may
+still complete. Requests are serialized, size-limited and time-limited.
+
+Development: `python3 -m unittest discover -s tests -v` checks request validation, pairing,
+key storage and error handling. `node tests/assistant.cjs` uses a mocked provider for UI,
+conversation and context tests. A live Gemini answer requires a configured user key.
+
+Integration references: [LangChain Gemini integration](https://docs.langchain.com/oss/python/integrations/chat/google_generative_ai),
+[FDA industry resources](https://www.fda.gov/food/nutrition-food-labeling-and-critical-foods/industry-resources-changes-nutrition-facts-label).

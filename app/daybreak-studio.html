@@ -252,6 +252,11 @@
   #shelf-settings label{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:10px 0;font-size:12px}
   #shelf-settings input[type=number]{box-sizing:border-box;width:88px;min-width:88px;height:38px;padding:8px 10px;background:#202938;color:#f4f7fc;border:1px solid #718198;border-radius:6px;font:600 15px var(--mono);color-scheme:dark}
   #shelf-settings input[type=number]:focus-visible{outline:2px solid #62e0ba;outline-offset:2px}
+
+#studio-help{position:fixed;z-index:100;top:64px;right:12px;bottom:12px;width:min(430px,calc(100vw - 24px));box-sizing:border-box;overflow:auto;padding:18px;background:#171d26;color:#eef2f8;border:1px solid #718198;border-radius:12px;box-shadow:0 12px 40px #0008}
+#studio-help[hidden]{display:none}
+#studio-help label{display:block;margin:10px 0}#studio-help input[type=password],#studio-help textarea,#studio-help select{box-sizing:border-box;width:100%;padding:9px;background:#202938;color:#f4f7fc;border:1px solid #718198;border-radius:6px}
+#studio-help .hint{color:#aab8ca}#studio-help p{line-height:1.55}#studio-help .btnrow{flex-wrap:wrap}#studio-help .help-message{white-space:pre-wrap;overflow-wrap:anywhere;padding:12px;background:#242e3c;border-radius:8px}#help-chat{max-height:42vh;overflow:auto}#help-sources a{color:#8fdbc9}#studio-help :focus-visible{outline:2px solid #62e0ba;outline-offset:2px}#help-open{margin-left:8px;width:auto;flex:0 0 auto}
 </style>
 </head>
 <body>
@@ -771,7 +776,7 @@
 </dialog>
 <script>
 "use strict";
-const APP_VERSION = "1.19.1";   /* keep equal to /VERSION — verify_geometry.py checks */
+const APP_VERSION = "1.20.0";   /* keep equal to /VERSION — verify_geometry.py checks */
 
 /* ==========================================================================
    GEOMETRY — identical maths to build_box_mesh() in the Blender scripts.
@@ -4509,6 +4514,57 @@ function shelfValidate(value){
 function shelfEditor(){for(const k of ['preset','rows','facings','depth'])$('shelf-'+k).value=state.shelf[k];$('shelf-settings').hidden=state.shelf.preset==='studio';$('shelf-summary').textContent=state.shelf.preset==='studio'?'Standalone product lineup':state.shelf.rows*state.shelf.facings*state.shelf.depth+' boxes · simple shelf bay';}
 function initShelf(){for(const k of ['preset','rows','facings','depth'])$('shelf-'+k).onchange=e=>{try{state.shelf=shelfValidate({...state.shelf,[k]:k==='preset'?e.target.value:Number(e.target.value)});sessionTouch();}catch(error){$('export-message').textContent=error.message;}shelfEditor();};shelfEditor();}
 
+const HELP={chats:new Map(),busy:false,controller:null,project:null};
+const HELP_LESSONS=[
+ ['Start a project','Use Projects to create or reopen a project. Set a brief, then choose a panel in Workspace. Changes autosave locally; checkpoints let you return to a saved version.','workspace'],
+ ['Sketch and import artwork','Select Front, then Brand logo → Edit asset. Choose Dieline art · your size for flattened FPO sketches or PNG import. Export the app’s dieline kit first; preserve the entire square PNG and panel positions.','assets'],
+ ['Packaging content','Select Back or Left for stories, and Right for ingredients, allergens and nutrition. Choose Shared or a flavour override. Enter verified values; missing-field and overflow checks do not certify a label.','workspace'],
+ ['Prepress review','Review copy, actual image resolution, safe areas, barcodes and printer specifications. Full dieline is a six-face artwork net. Folding carton adds structural flaps but needs printer approval. Current exports are RGB drafts, not CMYK press files.','out'],
+ ['Build a shelf scene','Export → Blender scene: choose vertical blocks, one product per shelf or mixed assortment. Set shelves, facings and depth. Choose every flavour, review the proof checks and deploy. Shelf geometry appears in Blender after the queued job finishes.','out'],
+ ['Develop an ad','In Ads choose a flavour, poses, aspect ratios, background and slogan. Start with an audience and one substantiated benefit. Preview variations before export; the app does not publish campaigns.','ads']
+];
+function helpMessages(){const id=SESSION.id||'unsaved';if(!HELP.chats.has(id))HELP.chats.set(id,[]);return HELP.chats.get(id);}
+function helpRender(){const root=$('help-chat');root.replaceChildren();for(const item of helpMessages()){const p=document.createElement('p');p.className='help-message';const who=document.createElement('strong');who.textContent=item.role==='user'?'You':'Assistant';const text=document.createElement('span');text.textContent=item.text;p.append(who,document.createElement('br'),text);root.append(p);}root.scrollTop=root.scrollHeight;}
+async function helpStatus(){
+ $('help-status').textContent='Checking assistant connection…';await pingBridge();
+ if(!bridge?.authenticated){$('help-status').textContent='Connect this Studio to the local bridge to use Gemini. Tutorials work without it.';return;}
+ if(!bridge.assistant_api){$('help-status').textContent='Restart the bridge to enable the assistant. Tutorials remain available.';return;}
+ try{const r=await fetch(BRIDGE+'/assistant/status',{headers:bridgeHeaders(),signal:AbortSignal.timeout(5000)}),s=await r.json();if(!r.ok)throw Error();$('help-status').textContent=!s.installed?'Install the assistant runtime: python3 tools/setup_chat.py':!s.configured?'Runtime ready. Add your Gemini key under Setup.':'Gemini ready · '+s.model;}catch{$('help-status').textContent='Assistant connection unavailable. Try Refresh connection.';}
+}
+async function helpSend(){
+ const input=$('help-question'),question=input.value.trim();if(!question||HELP.busy)return;
+ if(!bridge?.authenticated||!bridge.assistant_api){await helpStatus();return;}
+ const project=SESSION.id,messages=helpMessages(),history=messages.slice(-12).map(m=>({role:m.role,text:m.text}));
+ HELP.busy=true;HELP.controller=new AbortController();$('help-send').disabled=true;$('help-cancel').hidden=false;input.value='';messages.push({role:'user',text:question});helpRender();$('help-status').textContent='Gemini is preparing an answer…';
+ const context={};if($('help-context').checked){const c=contentReport();Object.assign(context,{view:document.querySelector('.tabs [aria-selected=true]')?.dataset.tab||'workspace',panel:wsPanel(),size:state.g.name,shelf_layout:state.shelf.preset,missing_fields:c.missing.length,overflow_count:c.overflow.length});}
+ const timeout=setTimeout(()=>HELP.controller?.abort(),80000);
+ try{const r=await fetch(BRIDGE+'/assistant/chat',{method:'POST',headers:{...bridgeHeaders(),'Content-Type':'application/json'},body:JSON.stringify({message:question,history,market:$('help-market').value,context}),signal:HELP.controller.signal});const data=await r.json();if(!r.ok)throw Error(data.error||'Assistant unavailable.');
+ messages.push({role:'assistant',text:data.answer});if(messages.length>24)messages.splice(0,messages.length-24);
+ if(SESSION.id===project){helpRender();$('help-sources').replaceChildren();for(const source of data.sources||[]){const a=document.createElement('a');a.textContent=source.title+(source.retrieved?' · retrieved for this answer':' · reference only; could not retrieve');a.href=source.url;a.target='_blank';a.rel='noopener noreferrer';$('help-sources').append(a,document.createElement('br'));}$('help-status').textContent='AI guidance — review before use. No project changes were made.';}
+ }catch(e){if(SESSION.id===project){$('help-status').textContent=e.name==='AbortError'?'Stopped waiting. The provider may still finish the request.':e.message;input.value=question;}messages.pop();}
+ finally{clearTimeout(timeout);HELP.busy=false;HELP.controller=null;$('help-send').disabled=false;$('help-cancel').hidden=true;if(SESSION.id===project)helpRender();}
+}
+function initHelp(){
+ const button=document.createElement('button');button.className='btn alt';button.textContent='Help & assistant';button.id='help-open';document.querySelector('header').append(button);
+ const panel=document.createElement('aside');panel.id='studio-help';panel.hidden=true;panel.setAttribute('aria-labelledby','help-title');
+ panel.innerHTML='<div class="btnrow"><h2 id="help-title">Studio guide</h2><button id="help-close" class="btn alt">Close</button></div><details open><summary>Learn the app · no key needed</summary><label>Lesson<select id="help-lesson"></select></label><p id="help-lesson-text"></p><button id="help-go" class="btn alt">Open this area</button></details><hr><h3>Ask Gemini</h3><p class="hint">Questions and recent chat are sent to Google. Your artwork, ingredient text and API key are not included as chat context. Chats stay in this page’s memory and clear on reload. Google API usage charges may apply.</p><label>Labeling market<select id="help-market"><option value="unspecified">Choose market for labeling questions</option><option value="US">United States</option><option value="CA">Canada</option><option value="UK">United Kingdom</option><option value="EU">European Union</option></select></label><label class="chk"><input type="checkbox" id="help-context">Share current view, panel, size, layout and issue counts</label><details><summary>Setup · local API key</summary><p class="hint">Saved privately by your local bridge, excluded from Git and release files. Do not paste the key into chat.</p><label>Gemini API key<input id="help-key" type="password" autocomplete="off" spellcheck="false"></label><button id="help-key-save" class="btn alt">Save key locally</button><button id="help-connect" class="btn alt">Connect local bridge</button><button id="help-refresh" class="btn alt">Refresh connection</button></details><p id="help-status" role="status" class="hint"></p><div id="help-chat" role="log" aria-label="Assistant conversation" aria-live="polite"></div><div id="help-sources"></div><label>Your question<textarea id="help-question" rows="3" maxlength="4000" placeholder="How do I prepare this box for a printer?"></textarea></label><div class="btnrow"><button id="help-send" class="btn">Ask Gemini</button><button id="help-cancel" class="btn alt" hidden>Stop waiting</button><button id="help-clear" class="btn alt">Clear chat</button></div>';
+ document.body.append(panel);
+ const select=$('help-lesson');HELP_LESSONS.forEach((v,i)=>{const o=document.createElement('option');o.value=i;o.textContent=(i+1)+'. '+v[0];select.append(o);});
+ select.onchange=()=>$('help-lesson-text').textContent=HELP_LESSONS[+select.value][1];select.onchange();
+ $('help-go').onclick=()=>{setTab(HELP_LESSONS[+select.value][2]);panel.hidden=true;};
+ button.onclick=()=>{panel.hidden=false;HELP.project=SESSION.id;helpRender();helpStatus();$('help-close').focus();};
+ $('help-close').onclick=()=>{panel.hidden=true;button.focus();};
+ panel.addEventListener('keydown',e=>{e.stopPropagation();if(e.key==='Escape'){panel.hidden=true;button.focus();}});
+ $('help-send').onclick=helpSend;$('help-question').onkeydown=e=>{if(e.key==='Enter'&&(e.ctrlKey||e.metaKey)){e.preventDefault();helpSend();}};
+ $('help-cancel').onclick=()=>HELP.controller?.abort();$('help-clear').onclick=()=>{if(HELP.busy)return;HELP.chats.set(SESSION.id||'unsaved',[]);helpRender();$('help-sources').replaceChildren();};
+ $('help-refresh').onclick=helpStatus;$('help-connect').onclick=()=>connectBridge();
+ $('help-key-save').onclick=async()=>{const input=$('help-key'),key=input.value.trim();if(!key)return;
+  try{if(!bridge?.authenticated||!bridge.assistant_api)throw Error('Connect the updated bridge first.');const r=await fetch(BRIDGE+'/assistant/key',{method:'POST',headers:{...bridgeHeaders(),'Content-Type':'application/json'},body:JSON.stringify({key}),signal:AbortSignal.timeout(5000)});if(!r.ok)throw Error('Could not save the key. Check it and retry.');input.value='';await helpStatus();}catch(e){$('help-status').textContent=e.message;}
+ };
+ // Never display one project's chat when a different project is opened.
+ setInterval(()=>{if(!panel.hidden&&HELP.project!==SESSION.id){HELP.project=SESSION.id;helpRender();$('help-sources').replaceChildren();}},500);
+}
+
 /* --- boot --- */
 $("ver").textContent = "v" + APP_VERSION;
 runBrief();
@@ -4520,7 +4576,7 @@ redraw();
 initGL();
 adShow(); adPreview();       /* the designer initialised before the brief ran; size its canvas to the zone now */
 brandFillEditor();
-initWorkspace();initOutput();initFullDieline();initCarton();initShelf();
+initWorkspace();initOutput();initFullDieline();initCarton();initShelf();initHelp();
 projectBoot();
 </script>
 </body>
