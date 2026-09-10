@@ -4,6 +4,12 @@ Versions follow semver. `VERSION` at the repo root is the single source of
 truth; the app, the Python tools and every exported `job.json` carry it, and
 `tools/verify_geometry.py` fails if the app's inlined copy drifts from it.
 
+## 1.19.0 — 2026-09-10
+
+- Add persistent shelf-scene export settings, three planogram presets and bounded shelf/facing/depth controls.
+- Generate shelf decks, rails, backing and uprights with linked carton copies and a shelf-framing camera in Blender.
+
+
 ## 1.18.4 — 2026-09-10
 
 - Apply current artwork to the folding-carton preview and SVG, with a structural-only toggle and clear suggested glue areas.

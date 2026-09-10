@@ -579,7 +579,13 @@ def run(cfg):
         scene.name = manifest.get("name", scene.name)[:60]
     print(f"\nlayout      : {cols} across x {rows} deep")
 
-    build_camera(scene, built, cfg)
+    shelf = (manifest or {}).get('shelf')
+    if shelf:
+        sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+        from shelf_scene import build_shelf
+        built = build_shelf(scene, built, shelf)
+    else:
+        build_camera(scene, built, cfg)
     look_through_camera()
 
     out_dir = os.path.join(os.path.abspath(cfg["jobs_dir"]), "renders")

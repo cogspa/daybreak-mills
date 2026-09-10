@@ -11,6 +11,8 @@
 
   "carton_draft": {"glue_mm":15,"overlap_mm":12,"gap_mm":1,"taper_mm":3,"margin_mm":12},
 
+  "shelf_scene": {"gap_m":0.012,"board_m":0.022,"base_m":0.12,"clearance_m":0.08},
+
   "safe_area_mm": 4.0,
   "bleed_mm": 3.0,
   "bevel_m": 0.0018,

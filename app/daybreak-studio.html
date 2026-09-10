@@ -623,7 +623,7 @@
     <!-- ============ 4. EXPORT ============ -->
     <section class="view split" id="v-out">
       <aside class="side">
-        <h2>Export</h2>
+        <h2>Export</h2><div class="grp"><h3>Blender scene</h3><label>Layout<select id="shelf-preset"><option value="studio">Studio lineup</option><option value="vertical">Shelf · vertical flavour blocks</option><option value="horizontal">Shelf · one product per shelf</option><option value="mixed">Shelf · mixed assortment</option></select></label><div id="shelf-settings"><label>Shelves<input type="number" id="shelf-rows" min="1" max="5" value="3"></label><label>Facings per shelf<input type="number" id="shelf-facings" min="1" max="12" value="6"></label><label>Boxes deep<input type="number" id="shelf-depth" min="1" max="3" value="2"></label></div><p class="hint" id="shelf-summary"></p><p class="hint">Used by Deploy to Blender and ZIP exports. Choose every flavour or the full matrix for assortment comparisons. Shelf spacing automatically fits the largest selected carton. The browser preview remains the carton view.</p></div>
         <p class="hint">Texture and job file go to Blender. SVG and PDF go to print approval.</p>
 
         <div class="grp">
@@ -767,7 +767,7 @@
 </dialog>
 <script>
 "use strict";
-const APP_VERSION = "1.18.4";   /* keep equal to /VERSION — verify_geometry.py checks */
+const APP_VERSION = "1.19.0";   /* keep equal to /VERSION — verify_geometry.py checks */
 
 /* ==========================================================================
    GEOMETRY — identical maths to build_box_mesh() in the Blender scripts.
@@ -995,6 +995,7 @@ function projectReader(){
 const WS={ready:false,mode:'layout',drag:null,guides:[],glHome:null};
 const HISTORY={past:[],future:[],timer:null,paused:false,busy:false,pointer:false};
 const state = {
+  shelf:{preset:'studio',rows:3,facings:6,depth:2},
   workspace:{panel:"FRONT",selection:null,snap:true,grid:1},layers:{},
   brief:{audience:"families", household:"3-4", channel:"grocery", positioning:"mainstream", occasion:"everyday"},
   rec:null, g:null,
@@ -1751,7 +1752,7 @@ async function buildRange(mode){
   const stamp = new Date().toISOString().slice(0,16).replace(/[-:T]/g,"").replace(/(\d{8})(\d{4})/,"$1-$2");
   const rangeName = mode==="matrix" ? `daybreak_matrix_${stamp}_${OUTPUT.design?.id.slice(0,8)||""}` : `daybreak_range_${state.g.name.toLowerCase()}_${stamp}_${OUTPUT.design?.id.slice(0,8)||""}`;
   const enc = new TextEncoder(), entries = [];
-  const manifest = {format:"daybreak-range/1", design_export:OUTPUT.design, generator_version:APP_VERSION, created:new Date().toISOString(),
+  const manifest = {shelf:state.shelf.preset==='studio'?null:{...state.shelf},format:"daybreak-range/1", design_export:OUTPUT.design, generator_version:APP_VERSION, created:new Date().toISOString(),
                     name:rangeName, mode, brief:state.rec.brief, texture_resolution:S,
                     sizes, flavours:Object.keys(FLAVOURS), jobs:[]};
   let i = 0;
@@ -1786,7 +1787,7 @@ async function buildSingle(){
   const stamp = new Date().toISOString().slice(0,16).replace(/[-:T]/g,"").replace(/(\d{8})(\d{4})/,"$1-$2");
   const rangeName = `${name}_${stamp}`;
   const job = jobJSON(S); job.range = rangeName; job.range_index = 0;
-  const manifest = {format:"daybreak-range/1", design_export:OUTPUT.design, generator_version:APP_VERSION, created:new Date().toISOString(),
+  const manifest = {shelf:state.shelf.preset==='studio'?null:{...state.shelf},format:"daybreak-range/1", design_export:OUTPUT.design, generator_version:APP_VERSION, created:new Date().toISOString(),
                     name:rangeName, mode:"single", brief:state.rec.brief, texture_resolution:S,
                     sizes:[state.g.name], flavours:[state.rec.flavKey],
                     jobs:[{job:`${name}_job.json`, texture:`${name}_${S}.png`, size:state.g.name, flavour:state.rec.flavKey, index:0}]};
@@ -3661,7 +3662,7 @@ function sessionSnapshot(){
   const toURL = img => img ? (img.src && img.src.startsWith("data:") ? img.src : imgToDataURL(img)) : null;
   return {
     format:"daybreak-session/1", generator_version:APP_VERSION, saved:new Date().toISOString(),
-    content:clone(state.content),brand:brandSnapshot(),workspace:{...state.workspace},layers:clone(state.layers),
+    shelf:{...state.shelf},content:clone(state.content),brand:brandSnapshot(),workspace:{...state.workspace},layers:clone(state.layers),
     brief:{...state.brief}, overrides:{size:$("b-size-override").value, flavour:$("b-flavour-override").value},
     copy:{...state.copy}, spec:state.spec ? {...state.spec} : null, guides:state.guides,
     zones:{...state.zones}, assetScale:{...state.assetScale}, characterOnBack:state.characterOnBack,
@@ -3711,6 +3712,7 @@ async function sessionApply(snap){
     state.workspace.grid=Math.max(.1,Math.min(20,Number(state.workspace.grid) || 1));state.workspace.snap=state.workspace.snap!==false;
     state.layers=clone(snap.layers || {});
     state.content=contentValidate(snap.content);
+    state.shelf=shelfValidate(snap.shelf);shelfEditor();
     if(snap.brand) await applyBrand(snap.brand, {quiet:true});
     for(const k in briefIds) if(snap.brief && snap.brief[k]) $(briefIds[k]).value = snap.brief[k];
     $("b-size-override").value = (snap.overrides||{}).size || "";
@@ -3809,7 +3811,7 @@ function projectValidate(snap){
     if(typeof s.brand.name!=='string') throw new Error('Invalid brand name.');
   }
   if(s.images && !Array.isArray(s.images)) throw new Error('Invalid session images.');
-  if(s.content)s.content=contentValidate(s.content);
+  if(s.content)s.content=contentValidate(s.content);s.shelf=shelfValidate(s.shelf);
   return s;
 }
 async function projectApply(snap){
@@ -4494,6 +4496,15 @@ function initCarton(){
  $('carton-save').onclick=()=>{const old=state.g;try{state.g=geom($('carton-size').value);download(new Blob([cartonSVG($('carton-artwork').checked)],{type:'image/svg+xml'}),'daybreak_'+state.g.name.toLowerCase()+'_structural_DRAFT.svg');}finally{state.g=old;}};
 }
 
+function shelfValidate(value){
+ const s={preset:'studio',rows:3,facings:6,depth:2,...(value||{})};
+ if(!['studio','vertical','horizontal','mixed'].includes(s.preset))throw new Error('Invalid shelf layout.');
+ for(const [k,max] of [['rows',5],['facings',12],['depth',3]])if(!Number.isInteger(s[k])||s[k]<1||s[k]>max)throw new Error('Invalid shelf '+k);
+ return {preset:s.preset,rows:s.rows,facings:s.facings,depth:s.depth};
+}
+function shelfEditor(){for(const k of ['preset','rows','facings','depth'])$('shelf-'+k).value=state.shelf[k];$('shelf-settings').hidden=state.shelf.preset==='studio';$('shelf-summary').textContent=state.shelf.preset==='studio'?'Standalone product lineup':state.shelf.rows*state.shelf.facings*state.shelf.depth+' boxes · simple shelf bay';}
+function initShelf(){for(const k of ['preset','rows','facings','depth'])$('shelf-'+k).onchange=e=>{try{state.shelf=shelfValidate({...state.shelf,[k]:k==='preset'?e.target.value:Number(e.target.value)});sessionTouch();}catch(error){$('export-message').textContent=error.message;}shelfEditor();};shelfEditor();}
+
 /* --- boot --- */
 $("ver").textContent = "v" + APP_VERSION;
 runBrief();
@@ -4505,7 +4516,7 @@ redraw();
 initGL();
 adShow(); adPreview();       /* the designer initialised before the brief ran; size its canvas to the zone now */
 brandFillEditor();
-initWorkspace();initOutput();initFullDieline();initCarton();
+initWorkspace();initOutput();initFullDieline();initCarton();initShelf();
 projectBoot();
 </script>
 </body>
