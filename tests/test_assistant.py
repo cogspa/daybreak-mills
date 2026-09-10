@@ -50,3 +50,14 @@ class AssistantHTTPTests(unittest.TestCase):
             code,_,data=self.request('/assistant/chat','POST',json.dumps({'message':'Help'}),**{'X-Daybreak-Token':'a'*64})
             self.assertEqual(code,400)
             self.assertIn('Add your Gemini API key',data['error'])
+
+class OpaqueKeyTests(unittest.TestCase):
+    def test_opaque_and_quoted_keys(self):
+        with tempfile.TemporaryDirectory() as folder,patch.object(A,'ROOT',pathlib.Path(folder)),patch.object(A,'KEY_FILE',pathlib.Path(folder)/'.gemini-key'):
+            key='opaque.'+('x'*250)+'+/='
+            A.save_key({'key':'  "'+key+'"  '})
+            self.assertEqual(A.api_key(),key)
+    def test_rejects_whitespace_without_echoing_key(self):
+        for key in ['abc', 'private-value with spaces '+('x'*25), 'x'*5000]:
+            with self.assertRaises(A.AssistantError) as e:A.save_key({'key':key})
+            self.assertNotIn(key,str(e.exception))

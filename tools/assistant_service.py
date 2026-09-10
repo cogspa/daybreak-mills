@@ -32,8 +32,17 @@ def status():
 
 def save_key(data):
     key = data.get('key') if isinstance(data, dict) else None
-    if not isinstance(key, str) or not re.fullmatch(r'[A-Za-z0-9_-]{20,200}', key):
-        raise AssistantError('Enter a valid Gemini API key.')
+    if not isinstance(key, str):
+        raise AssistantError('Paste the API key itself into the key field.')
+    key = key.strip()
+    if len(key) >= 2 and key[0] == key[-1] and key[0] in ('"', "'"):
+        key = key[1:-1].strip()
+    # Provider credentials are opaque. Do not assume one prefix, alphabet or
+    # legacy token length; Google validates the credential on the first call.
+    if not 20 <= len(key) <= 4096:
+        raise AssistantError('The pasted key is too short or too long. Copy the complete API key, not its name.')
+    if any(c.isspace() or not 33 <= ord(c) <= 126 for c in key):
+        raise AssistantError('The key contains spaces, line breaks or non-ASCII characters. Paste only the API key, without a command or surrounding text.')
     import tempfile
     fd, name = tempfile.mkstemp(prefix='.gemini-key-', dir=ROOT)
     try:

@@ -776,7 +776,7 @@
 </dialog>
 <script>
 "use strict";
-const APP_VERSION = "1.20.1";   /* keep equal to /VERSION — verify_geometry.py checks */
+const APP_VERSION = "1.20.2";   /* keep equal to /VERSION — verify_geometry.py checks */
 
 /* ==========================================================================
    GEOMETRY — identical maths to build_box_mesh() in the Blender scripts.
@@ -4570,7 +4570,7 @@ function initHelp(){
  $('help-cancel').onclick=()=>HELP.controller?.abort();$('help-clear').onclick=()=>{if(HELP.busy)return;HELP.chats.set(SESSION.id||'unsaved',[]);helpRender();$('help-sources').replaceChildren();};
  $('help-refresh').onclick=helpStatus;$('help-connect').onclick=()=>connectBridge();
  $('help-key-save').onclick=async()=>{const input=$('help-key'),key=input.value.trim();if(!key)return;
-  try{if(!bridge?.authenticated||!bridge.assistant_api)throw Error('Connect the updated bridge first.');const r=await fetch(BRIDGE+'/assistant/key',{method:'POST',headers:{...bridgeHeaders(),'Content-Type':'application/json'},body:JSON.stringify({key}),signal:AbortSignal.timeout(5000)});if(!r.ok)throw Error('Could not save the key. Check it and retry.');input.value='';$('help-error').textContent='';await helpStatus();$('help-status').textContent+=' · Key saved. You can now ask your question.';}catch(e){$('help-error').textContent=e.message;}
+  try{if(!bridge?.authenticated||!bridge.assistant_api)throw Error('Connect the updated bridge first.');const r=await fetch(BRIDGE+'/assistant/key',{method:'POST',headers:{...bridgeHeaders(),'Content-Type':'application/json'},body:JSON.stringify({key}),signal:AbortSignal.timeout(5000)});const data=await r.json();if(!r.ok)throw Error(data.error||'Could not save the key. Check the local bridge and retry.');input.value='';$('help-error').textContent='';await helpStatus();$('help-status').textContent+=' · Key saved locally. Google will validate it when you ask a question.';}catch(e){$('help-error').textContent=e.message;}
  };
  // Never display one project's chat when a different project is opened.
  setInterval(()=>{if(!panel.hidden&&HELP.project!==SESSION.id){HELP.project=SESSION.id;helpRender();$('help-sources').replaceChildren();}},500);
