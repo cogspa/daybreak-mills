@@ -248,6 +248,10 @@
 #full-dieline canvas{display:block;max-width:100%;max-height:65vh;width:auto;height:auto;margin:auto;cursor:pointer}
 #full-dieline .btnrow{flex-wrap:wrap;gap:8px}
 #full-dieline :focus-visible{outline:3px solid #62e0ba;outline-offset:3px}
+  #shelf-settings{margin-top:12px}
+  #shelf-settings label{display:flex;align-items:center;justify-content:space-between;gap:12px;margin:10px 0;font-size:12px}
+  #shelf-settings input[type=number]{box-sizing:border-box;width:88px;min-width:88px;height:38px;padding:8px 10px;background:#202938;color:#f4f7fc;border:1px solid #718198;border-radius:6px;font:600 15px var(--mono);color-scheme:dark}
+  #shelf-settings input[type=number]:focus-visible{outline:2px solid #62e0ba;outline-offset:2px}
 </style>
 </head>
 <body>
@@ -767,7 +771,7 @@
 </dialog>
 <script>
 "use strict";
-const APP_VERSION = "1.19.0";   /* keep equal to /VERSION — verify_geometry.py checks */
+const APP_VERSION = "1.19.1";   /* keep equal to /VERSION — verify_geometry.py checks */
 
 /* ==========================================================================
    GEOMETRY — identical maths to build_box_mesh() in the Blender scripts.
