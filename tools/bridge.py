@@ -190,6 +190,8 @@ class Handler(BaseHTTPRequestHandler):
                 data=json.loads(body)
                 result=assistant_service.save_key(data) if u.path.endswith('/key') else assistant_service.answer(data)
                 return self._json(200,result)
+            except assistant_service.AssistantError as e:
+                return self._json(400, {'error': str(e)})
             except (ValueError,TypeError):
                 return self._json(400, {'error': 'Check your key, runtime installation, question length, model access and network connection, then retry.'})
             except Exception:

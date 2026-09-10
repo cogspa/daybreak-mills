@@ -44,3 +44,9 @@ class AssistantHTTPTests(unittest.TestCase):
         with patch.object(A,'api_key',return_value='private-test-key'):
             code,_,data=self.request('/assistant/status',**{'X-Daybreak-Token':'a'*64})
             self.assertEqual(code,200);self.assertNotIn('private-test-key',str(data))
+
+    def test_missing_key_has_specific_safe_error(self):
+        with patch.object(A,'api_key',return_value=''):
+            code,_,data=self.request('/assistant/chat','POST',json.dumps({'message':'Help'}),**{'X-Daybreak-Token':'a'*64})
+            self.assertEqual(code,400)
+            self.assertIn('Add your Gemini API key',data['error'])

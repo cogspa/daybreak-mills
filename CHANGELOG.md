@@ -4,6 +4,11 @@ Versions follow semver. `VERSION` at the repo root is the single source of
 truth; the app, the Python tools and every exported `job.json` carry it, and
 `tools/verify_geometry.py` fails if the app's inlined copy drifts from it.
 
+## 1.20.1 — 2026-09-10
+
+- Check assistant key/runtime readiness before clearing questions; open key setup and show persistent inline errors when chat is unavailable.
+- Return safe, specific setup errors from the bridge while keeping provider errors redacted.
+
 ## 1.20.0 — 2026-09-10
 
 - Add an offline six-lesson Studio tutorial and project-separated Gemini chat through a paired local LangChain gateway.

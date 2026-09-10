@@ -14,6 +14,10 @@ LOCK = threading.Lock()
 LAST_REQUEST = 0.0
 
 
+class AssistantError(ValueError):
+    """Fixed user-facing messages, never provider exception text."""
+
+
 def api_key():
     try:
         return KEY_FILE.read_text().strip()
@@ -29,7 +33,7 @@ def status():
 def save_key(data):
     key = data.get('key') if isinstance(data, dict) else None
     if not isinstance(key, str) or not re.fullmatch(r'[A-Za-z0-9_-]{20,200}', key):
-        raise ValueError('Enter a valid Gemini API key.')
+        raise AssistantError('Enter a valid Gemini API key.')
     import tempfile
     fd, name = tempfile.mkstemp(prefix='.gemini-key-', dir=ROOT)
     try:
@@ -43,42 +47,42 @@ def save_key(data):
 
 
 def validate(data):
-    if not isinstance(data, dict):raise ValueError('Invalid assistant request.')
+    if not isinstance(data, dict):raise AssistantError('Invalid assistant request.')
     message=data.get('message');history=data.get('history',[]);context=data.get('context',{})
-    if not isinstance(message,str) or not message.strip() or len(message)>4000:raise ValueError('Enter a question of up to 4,000 characters.')
-    if not isinstance(history,list) or len(history)>12:raise ValueError('Too much conversation history.')
+    if not isinstance(message,str) or not message.strip() or len(message)>4000:raise AssistantError('Enter a question of up to 4,000 characters.')
+    if not isinstance(history,list) or len(history)>12:raise AssistantError('Too much conversation history.')
     clean=[]
     for item in history:
-        if not isinstance(item,dict) or item.get('role') not in ('user','assistant') or not isinstance(item.get('text'),str) or len(item['text'])>8000:raise ValueError('Invalid conversation history.')
+        if not isinstance(item,dict) or item.get('role') not in ('user','assistant') or not isinstance(item.get('text'),str) or len(item['text'])>8000:raise AssistantError('Invalid conversation history.')
         clean.append({'role':item['role'],'text':item['text']})
-    if not isinstance(context,dict):raise ValueError('Invalid app context.')
+    if not isinstance(context,dict):raise AssistantError('Invalid app context.')
     safe={}
     for k in ['view','panel','size','shelf_layout','missing_fields','overflow_count']:
         if k in context:
-            if not isinstance(context[k],(str,int)) or len(str(context[k]))>100:raise ValueError('Invalid app context.')
+            if not isinstance(context[k],(str,int)) or len(str(context[k]))>100:raise AssistantError('Invalid app context.')
             safe[k]=context[k]
     market=data.get('market','unspecified')
-    if market not in ['unspecified','US','CA','UK','EU']:raise ValueError('Choose a supported market.')
+    if market not in ['unspecified','US','CA','UK','EU']:raise AssistantError('Choose a supported market.')
     return {'message':message.strip(),'history':clean,'context':safe,'market':market}
 
 
 def answer(data):
     global LAST_REQUEST
     clean=validate(data)
-    if not api_key():raise ValueError('Add your Gemini API key in Assistant setup.')
-    if not PYTHON.is_file():raise ValueError('Install the assistant runtime using tools/setup_chat.py.')
-    if not LOCK.acquire(blocking=False):raise ValueError('The assistant is answering another question. Try again shortly.')
+    if not api_key():raise AssistantError('Add your Gemini API key in Assistant setup.')
+    if not PYTHON.is_file():raise AssistantError('Install the assistant runtime using tools/setup_chat.py.')
+    if not LOCK.acquire(blocking=False):raise AssistantError('The assistant is answering another question. Try again shortly.')
     try:
-        if time.monotonic()-LAST_REQUEST<2:raise ValueError('Please wait a moment before asking again.')
+        if time.monotonic()-LAST_REQUEST<2:raise AssistantError('Please wait a moment before asking again.')
         LAST_REQUEST=time.monotonic()
         clean.update(key=api_key(),model=status()['model'])
         env={**os.environ,'LANGCHAIN_TRACING_V2':'false','LANGSMITH_TRACING':'false'}
         for k in ['LANGSMITH_API_KEY','LANGCHAIN_API_KEY']:env.pop(k,None)
         result=subprocess.run([str(PYTHON),str(ROOT/'tools/chat_worker.py')],input=json.dumps(clean),capture_output=True,text=True,timeout=75,env=env)
-        if result.returncode:raise ValueError('Gemini could not answer. Check the key, model access, quota and internet connection. No project changes were made.')
+        if result.returncode:raise AssistantError('Gemini could not answer. Check the key, model access, quota and internet connection. No project changes were made.')
         payload=json.loads(result.stdout)
-        if not payload.get('answer'):raise ValueError('Gemini returned no answer. Try a shorter question.')
+        if not payload.get('answer'):raise AssistantError('Gemini returned no answer. Try a shorter question.')
         return payload
     except subprocess.TimeoutExpired:
-        raise ValueError('The assistant timed out. Try again with a shorter question.') from None
+        raise AssistantError('The assistant timed out. Try again with a shorter question.') from None
     finally:LOCK.release()
