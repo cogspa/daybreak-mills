@@ -4,6 +4,11 @@ Versions follow semver. `VERSION` at the repo root is the single source of
 truth; the app, the Python tools and every exported `job.json` carry it, and
 `tools/verify_geometry.py` fails if the app's inlined copy drifts from it.
 
+## 1.18.4 — 2026-09-10
+
+- Apply current artwork to the folding-carton preview and SVG, with a structural-only toggle and clear suggested glue areas.
+
+
 ## 1.18.3 — 2026-09-10
 
 - Add a four-size folding-carton structural draft with glue seam, overlapping closure flaps, dust flaps, cut/crease layers and SVG download.

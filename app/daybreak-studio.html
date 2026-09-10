@@ -767,7 +767,7 @@
 </dialog>
 <script>
 "use strict";
-const APP_VERSION = "1.18.3";   /* keep equal to /VERSION — verify_geometry.py checks */
+const APP_VERSION = "1.18.4";   /* keep equal to /VERSION — verify_geometry.py checks */
 
 /* ==========================================================================
    GEOMETRY — identical maths to build_box_mesh() in the Blender scripts.
@@ -4459,7 +4459,7 @@ function cartonTemplate(size=state.g.name){
   if(x!==x0)line(creases,x,y,x,y+H);
   for(const sign of [-1,1]){const base=sign<0?y:y+H,len=(name==='FRONT'||name==='BACK')?major:dust,a=x+p.gap_mm/2,b=x+w-p.gap_mm/2,end=base+sign*len;
    const points=[[a,base],[a+p.taper_mm,end],[b-p.taper_mm,end],[b,base]];poly(points);line(creases,a,base,b,base);line(cuts,x,base,a,base);line(cuts,b,base,x+w,base);
-   flaps.push({name:(len===major?'Closure flap':'Dust flap'),points,x:a,y:Math.min(base,end),w:b-a,h:len});
+   flaps.push({panel:name,end:sign<0?'TOP':'BOTTOM',name:(len===major?'Closure flap':'Dust flap'),points,x:a,y:Math.min(base,end),w:b-a,h:len});
    if(name==='FRONT')glue.push({x:a+p.taper_mm,y:sign<0?end+2:end-p.overlap_mm+2,w:b-a-2*p.taper_mm,h:p.overlap_mm-4});
   }
   x+=w;
@@ -4469,20 +4469,29 @@ function cartonTemplate(size=state.g.name){
  glue.push({x:m+2,y:y+6,w:p.glue_mm-4,h:H-12});
  return {format:'daybreak-carton-draft/1',style:'Glued seal-end draft',size,W,D,H,width:x+m,height:H+major*2+m*2,cuts,creases,faces,flaps,glue,settings:{...p}};
 }
-function cartonSVG(){
+function cartonArtwork(t){
+ const source=document.createElement('canvas');drawNet(source,2048,{guides:false});
+ const panelURL=name=>{const r=panelRect(state.g,name,2048),cv=document.createElement('canvas');cv.width=Math.round(r.w);cv.height=Math.round(r.h);cv.getContext('2d').drawImage(source,r.x,r.y,r.w,r.h,0,0,cv.width,cv.height);return cv.toDataURL('image/png');};
+ const image=(r,name,fit='none')=>`<image x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" preserveAspectRatio="${fit}" href="${panelURL(name)}"/>`;
+ // The six-face artwork has no dust/glue artwork. Use the flavour field on
+ // inner flaps and fit top/bottom art to the outer (back-hinged) closures.
+ return '<g id="carton-artwork-layer">'+t.faces.map(r=>image(r,r.name)).join('')+t.flaps.map((r,i)=>`<defs><clipPath id="flap-art-${i}"><polygon points="${r.points.map(p=>p.join(',')).join(' ')}"/></clipPath></defs><g clip-path="url(#flap-art-${i})"><rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}" fill="${state.rec.flavour.field}"/>${r.panel==='BACK'?image(r,r.end,'xMidYMid meet'):''}</g>`).join('')+'</g>';
+}
+function cartonSVG(showArtwork=false){
  const t=cartonTemplate(),esc=xmlText;
+ t.artwork=showArtwork?{flavour:state.rec.flavKey,mapping:'Body panels at size; top/bottom fitted to back-hinged outer closures; other flaps use the flavour field',color:'RGB design preview',bleed:false}:null;
  const lines=items=>items.map(([x,y,a,b])=>`<path d="M${x} ${y}L${a} ${b}"/>`).join('');
  const labels=t.faces.map(r=>`<text x="${r.x+r.w/2}" y="${r.y+r.h/2}" text-anchor="middle">${r.name}</text><text x="${r.x+r.w/2}" y="${r.y+r.h/2+6}" text-anchor="middle" font-size="3">${r.w.toFixed(1)} × ${r.h.toFixed(1)} mm</text>`).join('');
- return `<svg xmlns="http://www.w3.org/2000/svg" width="${t.width}mm" height="${t.height}mm" viewBox="0 0 ${t.width} ${t.height}"><title>STRUCTURAL DRAFT — printer approval required</title><metadata>${esc(JSON.stringify(t))}</metadata><rect width="100%" height="100%" fill="white"/><g fill="#f4efe6">${t.faces.map(r=>`<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}"/>`).join('')}${t.flaps.map(r=>`<polygon points="${r.points.map(p=>p.join(',')).join(' ')}"/>`).join('')}</g><g id="suggested-glue-areas" fill="#c8e8c2">${t.glue.map(r=>`<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}"/>`).join('')}</g><g id="cut" stroke="#c92751" stroke-width=".25" fill="none">${lines(t.cuts)}</g><g id="crease" stroke="#1675bd" stroke-width=".25" stroke-dasharray="2 1" fill="none">${lines(t.creases)}</g><g id="annotations" fill="#16233a" font-family="sans-serif" font-size="4"><text x="12" y="6">STRUCTURAL DRAFT · ${esc(t.size)} · printer approval required</text>${labels}${t.flaps.map(r=>`<text x="${r.x+r.w/2}" y="${r.y+r.h/2}" text-anchor="middle" font-size="3">${r.name}</text>`).join('')}<text x="12" y="${t.height-4}" font-size="3">Red: cut · Blue dashed: crease · Green: suggested glue · No board-thickness compensation</text></g></svg>`;
+ return `<svg xmlns="http://www.w3.org/2000/svg" width="${t.width}mm" height="${t.height}mm" viewBox="0 0 ${t.width} ${t.height}"><title>STRUCTURAL DRAFT — printer approval required</title><metadata>${esc(JSON.stringify(t))}</metadata><rect width="100%" height="100%" fill="white"/><g fill="#f4efe6">${t.faces.map(r=>`<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}"/>`).join('')}${t.flaps.map(r=>`<polygon points="${r.points.map(p=>p.join(',')).join(' ')}"/>`).join('')}</g>${showArtwork?cartonArtwork(t):''}<g id="suggested-glue-areas" fill="#c8e8c2">${t.glue.map(r=>`<rect x="${r.x}" y="${r.y}" width="${r.w}" height="${r.h}"/>`).join('')}</g><g id="cut" stroke="#c92751" stroke-width=".25" fill="none">${lines(t.cuts)}</g><g id="crease" stroke="#1675bd" stroke-width=".25" stroke-dasharray="2 1" fill="none">${lines(t.creases)}</g><g id="annotations" fill="#16233a" font-family="sans-serif" font-size="4"><text x="12" y="6">STRUCTURAL DRAFT · ${esc(t.size)} · printer approval required</text>${showArtwork?'':labels}${(showArtwork?[]:t.flaps).map(r=>`<text x="${r.x+r.w/2}" y="${r.y+r.h/2}" text-anchor="middle" font-size="3">${r.name}</text>`).join('')}<text x="12" y="${t.height-4}" font-size="3">Red: cut · Blue dashed: crease · Green: suggested glue · No board-thickness compensation</text></g></svg>`;
 }
 function initCarton(){
  const b=document.createElement('button');b.className='btn alt';b.textContent='Folding carton';b.id='ws-carton';$('ws-full-dieline').after(b);
  const d=document.createElement('dialog');d.id='carton-dialog';d.setAttribute('aria-labelledby','carton-title');d.style.cssText='width:min(1100px,94vw);max-height:94vh;overflow:auto;background:#171d26;color:#eee;padding:20px';
- d.innerHTML='<h2 id="carton-title">Folding carton · structural draft</h2><p>Glued seal-end carton: side seam, overlapping end closures and dust flaps. Green marks suggested glue areas. Flap dimensions and board allowances need printer approval. This template does not yet carry your artwork.</p><div class="btnrow"><label>Box size <select id="carton-size"></select></label><button class="btn" id="carton-save">Download structural SVG</button><button class="btn alt" id="carton-close">Close</button></div><div id="carton-preview"></div>';
- document.body.append(d);const paint=()=>{const size=$('carton-size').value;const old=state.g;try{state.g=geom(size);$('carton-preview').innerHTML=cartonSVG();$('carton-preview').firstElementChild.style.cssText='display:block;max-width:100%;height:65vh;margin:auto';}finally{state.g=old;}};
+ d.innerHTML='<h2 id="carton-title">Folding carton · structural draft</h2><p>Glued seal-end carton: side seam, overlapping end closures and dust flaps. Green marks suggested glue areas. Flap dimensions and board allowances need printer approval. Artwork preview maps the body panels and fits top/bottom art onto the outer closures. Inner flaps use the flavour colour; green glue areas stay clear. RGB draft only; bleed and closure artwork need printer review.</p><div class="btnrow"><label>Box size <select id="carton-size"></select></label><label class="chk"><input type="checkbox" id="carton-artwork" checked>Show artwork</label><button class="btn" id="carton-save">Download draft SVG</button><button class="btn alt" id="carton-close">Close</button></div><div id="carton-preview"></div>';
+ document.body.append(d);const paint=()=>{const size=$('carton-size').value;const old=state.g;try{state.g=geom(size);$('carton-preview').innerHTML=cartonSVG($('carton-artwork').checked);$('carton-preview').firstElementChild.style.cssText='display:block;max-width:100%;height:65vh;margin:auto';}finally{state.g=old;}};
  Object.keys(SIZES).forEach(k=>{const o=document.createElement('option');o.value=o.textContent=k;$('carton-size').append(o);});
- b.onclick=()=>{$('carton-size').value=state.g.name;paint();d.showModal();};$('carton-size').onchange=paint;$('carton-close').onclick=()=>d.close();
- $('carton-save').onclick=()=>{const old=state.g;try{state.g=geom($('carton-size').value);download(new Blob([cartonSVG()],{type:'image/svg+xml'}),'daybreak_'+state.g.name.toLowerCase()+'_structural_DRAFT.svg');}finally{state.g=old;}};
+ b.onclick=()=>{$('carton-size').value=state.g.name;paint();d.showModal();};$('carton-size').onchange=paint;$('carton-artwork').onchange=paint;$('carton-close').onclick=()=>d.close();
+ $('carton-save').onclick=()=>{const old=state.g;try{state.g=geom($('carton-size').value);download(new Blob([cartonSVG($('carton-artwork').checked)],{type:'image/svg+xml'}),'daybreak_'+state.g.name.toLowerCase()+'_structural_DRAFT.svg');}finally{state.g=old;}};
 }
 
 /* --- boot --- */
