@@ -9,6 +9,8 @@
   "version": "1.0.0",
   "units": { "length": "inch", "derived": "metre", "inch_to_metre": 0.0254 },
 
+  "carton_draft": {"glue_mm":15,"overlap_mm":12,"gap_mm":1,"taper_mm":3,"margin_mm":12},
+
   "safe_area_mm": 4.0,
   "bleed_mm": 3.0,
   "bevel_m": 0.0018,

@@ -511,3 +511,9 @@ See `tests/README.md` for the repeatable Stage 1 checks and sample scenarios.
 ### View the complete flattened box
 
 Choose **Workspace → Full dieline** to see all six panels together. Toggle guides, click a face or use the panel buttons to return to editing. Escape closes the viewer.
+
+### Folding-carton structural draft
+
+Choose **Workspace → Folding carton**. The seal-end draft provides four body panels, a side glue flap, four major end-closure flaps and four dust flaps. Select any of the four sizes and download a true-size SVG with separate cut, crease, suggested glue and annotation groups. Defaults live in `spec/boxes.json` under `carton_draft`. This is an unprinted structural starting point, without board-thickness compensation, artwork bleed or press-specific allowances; obtain printer approval before cutting or manufacturing.
+
+Construction reference: [seal-end carton structure](https://www.pakingduck.com/packaging-catalog/seal-end-box). The draft dimensions are app defaults, not a certified industry standard.
