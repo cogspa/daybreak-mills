@@ -61,3 +61,13 @@ class OpaqueKeyTests(unittest.TestCase):
         for key in ['abc', 'private-value with spaces '+('x'*25), 'x'*5000]:
             with self.assertRaises(A.AssistantError) as e:A.save_key({'key':key})
             self.assertNotIn(key,str(e.exception))
+
+class ProviderErrors(unittest.TestCase):
+    def test_safe_categories(self):
+        import chat_worker
+        for message,expected in [('model not found SECRET','model_not_found'),('quota SECRET','quota'),('API key not valid SECRET','authentication'),('connection error SECRET','network')]:
+            self.assertEqual(chat_worker.error_code(Exception(message)),expected)
+    def test_model_error_reaches_user_safely(self):
+        with patch.object(A,'api_key',return_value='private-test-key'),patch.object(A,'LAST_REQUEST',0),patch.object(A,'PYTHON',pathlib.Path(sys.executable)),patch.object(A.subprocess,'run') as run:
+            run.return_value.returncode=0;run.return_value.stdout=json.dumps({'error_code':'model_not_found'})
+            with self.assertRaisesRegex(A.AssistantError,'model is unavailable'):A.answer({'message':'hello'})

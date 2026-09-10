@@ -56,6 +56,16 @@ Do not output HTML. Use plain text or short Markdown lists. Avoid claiming the s
     content=response.content
     text=content if isinstance(content,str) else '\n'.join(b.get('text','') for b in content if isinstance(b,dict) and b.get('type')=='text')
     return {'answer':text[:8000],'sources':[{k:v for k,v in s.items() if k!='excerpt'} for s in sources], 'model':data['model']}
+def error_code(error):
+    # Inspect locally; return only an allowlisted category, never provider text.
+    text=(type(error).__name__+' '+str(error)).lower()
+    if 'notfound' in text or 'not_found' in text or 'not found' in text:return 'model_not_found'
+    if any(k in text for k in ['quota','resource_exhausted','ratelimit','429']):return 'quota'
+    if any(k in text for k in ['api_key_invalid','api key not valid','unauth','permission','403','401']):return 'authentication'
+    if 'timeout' in text or 'timed out' in text:return 'timeout'
+    if any(k in text for k in ['connect','network','certificate']):return 'network'
+    return 'provider'
+
 if __name__=='__main__':
     try:print(json.dumps(run(json.load(sys.stdin))))
-    except Exception:sys.exit(1) # Never serialize provider exceptions containing credentials.
+    except Exception as e:print(json.dumps({'error_code':error_code(e)}))

@@ -4,6 +4,11 @@ Versions follow semver. `VERSION` at the repo root is the single source of
 truth; the app, the Python tools and every exported `job.json` carry it, and
 `tools/verify_geometry.py` fails if the app's inlined copy drifts from it.
 
+## 1.20.3 — 2026-09-10
+
+- Switch Gemini chat to the verified working Flash alias after the previous model returned not found.
+- Surface safe model, authentication, quota, connection and timeout categories without exposing provider messages or credentials.
+
 ## 1.20.2 — 2026-09-10
 
 - Accept opaque Gemini credentials without the legacy character/length restriction, trim surrounding quotes, and explain malformed pastes without echoing secrets.

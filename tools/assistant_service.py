@@ -27,7 +27,7 @@ def api_key():
 
 def status():
     return {'configured': bool(api_key()), 'installed': PYTHON.is_file(),
-            'model': os.environ.get('DAYBREAK_CHAT_MODEL', 'gemini-2.5-flash')}
+            'model': os.environ.get('DAYBREAK_CHAT_MODEL', 'gemini-flash-latest')}
 
 
 def save_key(data):
@@ -90,6 +90,15 @@ def answer(data):
         result=subprocess.run([str(PYTHON),str(ROOT/'tools/chat_worker.py')],input=json.dumps(clean),capture_output=True,text=True,timeout=75,env=env)
         if result.returncode:raise AssistantError('Gemini could not answer. Check the key, model access, quota and internet connection. No project changes were made.')
         payload=json.loads(result.stdout)
+        if payload.get('error_code'):
+            errors={
+                'model_not_found':'The configured Gemini model is unavailable. Update DAYBREAK_CHAT_MODEL or use the default Gemini Flash model.',
+                'quota':'Google rejected this request because of API quota or rate limits. Check your Google AI project quota/billing and retry later.',
+                'authentication':'Google rejected the API credentials or permissions. Check the saved key and its API restrictions.',
+                'network':'Could not connect to Gemini. Check the internet connection and retry.',
+                'timeout':'Gemini timed out. Try a shorter question.',
+            }
+            raise AssistantError(errors.get(payload['error_code'],'Gemini could not answer this request. Try again or check model access.'))
         if not payload.get('answer'):raise AssistantError('Gemini returned no answer. Try a shorter question.')
         return payload
     except subprocess.TimeoutExpired:

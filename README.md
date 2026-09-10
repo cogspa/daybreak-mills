@@ -532,7 +532,7 @@ For chat, install the optional local runtime once with `python3 tools/setup_chat
 then restart the bridge. In **Help & assistant → Setup**, connect the bridge and
 enter your Gemini API key using **Save key locally**. Do not paste it into a chat.
 The installer creates `.venv-chat`; LangChain uses the Gemini Developer API through
-`langchain-google-genai`. The default model is `gemini-2.5-flash`; the bridge environment
+`langchain-google-genai`. The default model is `gemini-flash-latest`; the bridge environment
 variable `DAYBREAK_CHAT_MODEL` can select another model your key can access.
 
 The paired local bridge stores the key in `.gemini-key` with owner-only permissions.
