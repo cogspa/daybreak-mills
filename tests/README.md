@@ -71,3 +71,11 @@ is retained as `/private/tmp/daybreak-stage5-proof.zip` for real Blender testing
 serialization, duplicate submissions, process cancellation, fresh retries,
 restarts, timeouts, missing files and truncated output. Fake Blender writes to
 the real pipeline output paths. A separate real Blender render must also succeed.
+
+## Simplified connection
+
+`node tests/connect.cjs` checks the Connect button, approval exchange and a
+remembered connection after session storage is cleared and Studio is reloaded.
+The isolated test service supplies approval; it never approves a real Mac dialog.
+`test_pairing_flow.py` covers denied/expired requests, request isolation, rate
+limits and explicit Allow-only handling of the native dialog result.

@@ -4,6 +4,13 @@ Versions follow semver. `VERSION` at the repo root is the single source of
 truth; the app, the Python tools and every exported `job.json` carry it, and
 `tools/verify_geometry.py` fails if the app's inlined copy drifts from it.
 
+## 1.18.1 — 2026-09-09
+
+- Replace routine pairing-file selection with Connect to Blender and an explicit local approval window with matching codes.
+- Remember approved connections per Studio file in browser storage; retain advanced file pairing as a fallback.
+- Add bounded, expiring approval requests and connection-flow regression tests.
+
+
 ## 1.18.0 — 2026-09-09
 
 - Add checked design-proof exports with saved project checkpoints, immutable design references and unique proof filenames.

@@ -95,6 +95,20 @@ with missing fields and overflow for that exact flavour and box size. Checks
 cover the new Back, Left and Right text blocks, not imported artwork or front
 copy. Warnings are editor-only and are not printed on the artwork.
 
+## Connect Studio to Blender
+
+In **Export**, click **Connect to Blender**. Studio shows a six-digit code and
+opens a local approval window on macOS. Confirm the codes match and click
+**Allow**. Studio remembers this connection for this project in the current
+browser, including after you close and reopen it. If the bridge is stopped, the
+button asks the installed Daybreak Bridge helper to start it.
+
+A private key is still generated locally; it is never built into the distributed
+app. Unapproved, denied and expired requests cannot retrieve it. Approval requests
+expire after 100 seconds. A new browser or cleared browser storage requires a
+new connection. **Advanced connection → Choose pairing file** remains available
+for other platforms or as a fallback; it is no longer the normal setup flow.
+
 ## Reliable exports and Blender rendering
 
 The **Export** view checks every requested flavour and size before producing

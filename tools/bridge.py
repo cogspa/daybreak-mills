@@ -46,7 +46,10 @@ from urllib.parse import urlparse, parse_qs
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from bridge_security import MAX_UPLOAD, pairing_key, validate_range
 from render_queue import RenderQueue
+from bridge_pairing import PairingRequests
 import watch_jobs as W                                   # noqa: E402
+
+PAIRING = PairingRequests()
 
 STATE = {"blender": None, "cfg": None, "led": None, "history": None,
          "queue": None, "token": None, "lock": threading.Lock(), "started": time.time(), "folders": []}
@@ -160,7 +163,7 @@ class Handler(BaseHTTPRequestHandler):
     def do_POST(self):
         u = urlparse(self.path)
         self.close_connection = True
-        if not self._allowed():
+        if not self._allowed(u.path not in ("/pair/start", "/pair/result")):
             return
         if self.headers.get("Transfer-Encoding"):
             return self._json(400, {"error": "Transfer-Encoding is not supported"})
@@ -168,7 +171,7 @@ class Handler(BaseHTTPRequestHandler):
             length = int(self.headers.get("Content-Length", ""))
         except ValueError:
             return self._json(400, {"error": "Invalid Content-Length"})
-        limit = 16384 if u.path == "/select" else MAX_UPLOAD
+        limit = 16384 if u.path == "/select" or u.path.startswith("/pair/") else MAX_UPLOAD
         if length < 0 or length > limit:
             return self._json(413, {"error": "Upload exceeds request limit"})
         self.connection.settimeout(30)
@@ -179,6 +182,21 @@ class Handler(BaseHTTPRequestHandler):
         if len(body) != length:
             return self._json(400, {"error": "Incomplete upload"})
 
+        if u.path == "/pair/start":
+            if sys.platform != 'darwin':
+                return self._json(503, {"error": "Use Advanced connection to choose the pairing file on this platform."})
+            try:
+                return self._json(202, PAIRING.start())
+            except ValueError as e:
+                return self._json(429, {"error": str(e)})
+        if u.path == "/pair/result":
+            try:
+                data = json.loads(body)
+                if not isinstance(data, dict):
+                    raise ValueError()
+                return self._json(200, PAIRING.poll(data.get('id'), STATE['token']))
+            except (ValueError, TypeError):
+                return self._json(400, {"error": "Invalid connection request"})
         if u.path == "/queue" or u.path.startswith("/queue/"):
             if not STATE["queue"]:
                 return self._json(503, {"error": "Restart the bridge to enable the render queue"})
@@ -256,7 +274,7 @@ def status_payload():
     if chosen and all(b["path"] != chosen for b in installs):     # e.g. --blender to a custom path
         installs.insert(0, {"path": chosen, "version": ".".join(map(str, W.blender_version(chosen)))})
     return {
-        "bridge": "daybreak", "version": W.repo_version(), "authenticated": True, "queue_api": 1,
+        "bridge": "daybreak", "version": W.repo_version(), "authenticated": True, "queue_api": 1, "pairing_api": 1,
         "uptime_s": int(time.time() - STATE["started"]),
         "blender": chosen,
         "blender_version": ".".join(map(str, W.blender_version(chosen))) if chosen else None,

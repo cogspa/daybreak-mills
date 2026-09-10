@@ -624,7 +624,7 @@
         <div class="grp">
           <span class="lab">Deploy to Blender</span>
           <div id="bridge-pill" class="hint" style="margin:0 0 8px">checking for the bridge…</div>
-          <button class="btn alt" id="bridge-pair" hidden>Choose pairing file</button>
+          <button class="btn alt" id="bridge-pair" hidden>Connect to Blender</button><p id="bridge-connect-status" class="hint" role="status"></p><details><summary>Advanced connection</summary><button class="btn alt" id="bridge-pair-advanced">Choose pairing file</button></details>
           <input type="file" id="bridge-pair-file" accept="application/json" hidden>
           <div class="row"><select id="bridge-blender" disabled><option>Blender —</option></select></div>
           <div class="row"><select id="deploy-what">
@@ -762,7 +762,7 @@
 </dialog>
 <script>
 "use strict";
-const APP_VERSION = "1.18.0";   /* keep equal to /VERSION — verify_geometry.py checks */
+const APP_VERSION = "1.18.1";   /* keep equal to /VERSION — verify_geometry.py checks */
 
 /* ==========================================================================
    GEOMETRY — identical maths to build_box_mesh() in the Blender scripts.
@@ -1799,9 +1799,43 @@ async function buildSingle(){
    that identifies itself — a foreign server on the way would otherwise pass. */
 let BRIDGE = "http://127.0.0.1:8765";
 let bridgeToken = "";
-try { bridgeToken = sessionStorage.getItem("daybreak-bridge-token") || ""; } catch {}
+const bridgeStorageKey="daybreak-bridge-token:"+location.pathname;
+try { bridgeToken = localStorage.getItem(bridgeStorageKey) || sessionStorage.getItem("daybreak-bridge-token") || ""; } catch {}
 const bridgeHeaders = () => ({"X-Daybreak-Token":bridgeToken});
 let bridge = null;                       // last /status payload, or null when unreachable
+
+function rememberBridgeToken(token){
+  bridgeToken=token;
+  try{localStorage.setItem(bridgeStorageKey,token);sessionStorage.setItem('daybreak-bridge-token',token);return true;}catch{return false;}
+}
+async function connectBridge(){
+  const button=$('bridge-pair'),status=$('bridge-connect-status');
+  if(button.disabled)return;button.disabled=true;
+  try{
+    if(!bridge){wakeBridge();await waitForBridge(button,15);if(!bridge)throw new Error("The bridge did not start. Open Daybreak Bridge, then try Connect to Blender again.");}
+    const endpoint=BRIDGE;
+    status.textContent='Requesting approval on this computer…';
+    const response=await fetch(endpoint+'/pair/start',{method:'POST',body:'',signal:AbortSignal.timeout(5000)});
+    const request=await response.json();if(!response.ok)throw new Error(request.error || 'Restart the updated bridge to connect.');
+    if(!/^[0-9a-f]{64}$/.test(request.id)||!/^\d{6}$/.test(request.code))throw new Error('Unexpected connection response.');
+    status.textContent='Connection code: '+request.code+'. In the Daybreak approval window, check this code and click Allow.';
+    const deadline=Date.now()+100000;
+    while(Date.now()<deadline){
+      await new Promise(r=>setTimeout(r,750));
+      const result=await fetch(endpoint+'/pair/result',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:request.id}),signal:AbortSignal.timeout(5000)});
+      if(!result.ok)throw new Error('Connection request could not be checked. Try again.');const data=await result.json();
+      if(data.status==='approved'){
+        if(!/^[0-9a-f]{64}$/.test(data.token))throw new Error('Invalid connection approval.');
+        const remembered=rememberBridgeToken(data.token);await pingBridge();
+        if(!bridge?.authenticated)throw new Error('Approval received, but the bridge is unavailable. Try reconnecting.');
+        status.textContent=remembered?'Connected. This Studio will remember your approval.':'Connected for now. Browser storage is unavailable, so reconnect after reopening.';queueRefresh();return;
+      }
+      if(data.status==='denied')throw new Error('Connection was not approved. Click Connect to Blender to try again.');
+      if(data.status==='expired')break;
+    }
+    throw new Error('Connection request expired. Click Connect to Blender to try again.');
+  }catch(e){status.textContent=e.message;}finally{button.disabled=false;button.textContent="Connect to Blender";}
+}
 
 async function probe(port){
   const ctrl = new AbortController(); const t = setTimeout(()=>ctrl.abort(), 900);
@@ -1817,7 +1851,7 @@ async function probe(port){
 }
 async function pingBridge(){
   const hits = await Promise.all(Array.from({length:10}, (_,i)=>probe(8765+i)));
-  const hit = hits.find(Boolean);
+  const hit = hits.find(h=>h?.j.authenticated) || hits.find(h=>h?.j.pairing_required) || hits.find(Boolean);
   if(hit){ BRIDGE = `http://127.0.0.1:${hit.port}`; bridge = hit.j; }
   else bridge = null;
   renderBridge();
@@ -1834,10 +1868,10 @@ function renderBridge(){
     return;
   }
   const on = !!bridge && !bridge.pairing_required;
-  $("bridge-pair").hidden = !bridge || on;
+  $("bridge-pair").hidden = on;
   if(bridge && bridge.pairing_required){
     sel.disabled = true;
-    pill.textContent = "Bridge found. Choose the pairing file in this project’s jobs folder to connect.";
+    pill.textContent = "Bridge found. Connect once to use Blender from this Studio.";
     $("deploy-go").textContent = "Pair to deploy";
     return;
   }
@@ -1892,7 +1926,7 @@ async function deploy(what){
     }
   }
   if(bridge.restart_required){ btn.disabled = false; renderBridge(); return; }
-  if(bridge.pairing_required){ btn.disabled = false; $("bridge-pair-file").click(); return; }
+  if(bridge.pairing_required){ btn.disabled = false; connectBridge(); return; }
   btn.disabled = true; btn.textContent = what==="matrix" ? "Rendering 24 textures…" : "Rendering artwork…";
   try {
     const pkg = what==="one" ? await buildSingle() : await buildRange(what);
@@ -2584,7 +2618,8 @@ function renderOut(){
 }
 $("e-res").addEventListener("change", renderOut);
 $("e-range-go").addEventListener("click", ()=>exportRange($("e-range").value));
-$("bridge-pair").addEventListener("click", ()=>$("bridge-pair-file").click());
+$("bridge-pair").addEventListener("click", connectBridge);
+$("bridge-pair-advanced").addEventListener("click", ()=>$("bridge-pair-file").click());
 $("bridge-pair-file").addEventListener("change", async e=>{
   const file = e.target.files[0]; e.target.value = "";
   if(!file) return;
@@ -2593,7 +2628,7 @@ $("bridge-pair-file").addEventListener("change", async e=>{
     const data = JSON.parse(await file.text());
     if(data.format !== "daybreak-pairing/1" || !/^[0-9a-f]{64}$/.test(data.token)) throw new Error("Invalid pairing file");
     bridgeToken = data.token;
-    try { sessionStorage.setItem("daybreak-bridge-token", bridgeToken); } catch {}
+    rememberBridgeToken(bridgeToken);
     await pingBridge();
   } catch { $("bridge-pill").textContent = "Choose jobs/bridge-pairing.json from this project."; }
 });
@@ -4380,6 +4415,7 @@ function initOutput(){
  const mapping={'e-job':['job','one'],'e-svg':['svg','one'],'e-pdf':['pdf','one'],'e-all':['all','one'],'e-range-go':['range',null],'deploy-go':['queue',null]};
  for(const [id,[kind,mode]] of Object.entries(mapping))$(id).addEventListener('click',e=>{
   e.preventDefault();e.stopImmediatePropagation();
+  if(kind==='queue' && bridge?.pairing_required){connectBridge();return;}
   if(kind==='queue' && (!bridge?.authenticated || !bridge.queue_api)){$('export-message').textContent='Start or restart the updated bridge, then pair it to use the queue. File exports remain available.';pingBridge();return;}
   outputRun(kind,mode || $(kind==='queue'?'deploy-what':'e-range').value);
  },true);
